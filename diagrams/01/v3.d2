@@ -1,0 +1,25 @@
+...@../_theme
+direction: right
+
+zd: "Zendesk" {class: ext}
+
+svc: Classifier service {
+  class: zone
+  h: "Haiku 5.5\nfirst stage" {class: model}
+  g1: "Gate 1" {class: svc}
+  s: "Sonnet 5.5\nsecond stage" {class: [model; new]}
+  g2: "Gate 2" {class: [svc; new]}
+  h -> g1
+  g1 -> s: "not confident"
+  s -> g2
+}
+team: "Team queue" {class: svc}
+triage: "Triage group" {class: actor}
+golden: "Golden set:\nboth models on\nevery ticket" {class: store}
+
+zd -> svc.h: webhook
+svc.g1 -> team: confident
+svc.g2 -> team: confident
+svc.g2 -> triage: "still unsure"
+golden -> svc.g1: "thresholds and\nchoice of models" {class: offline}
+golden -> svc.g2 {class: offline}

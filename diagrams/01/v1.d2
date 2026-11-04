@@ -1,0 +1,20 @@
+...@../_theme
+direction: right
+
+zd: "Zendesk" {class: ext}
+
+svc: Classifier service {
+  class: zone
+  hook: "Verify signature,\nqueue job" {class: [svc; new]}
+  cls: "Haiku 5.5\nJSON schema:\ncategory enum, confidence" {class: [model; new]}
+  val: "Validate:\nstop reason, enum,\ncase-insensitive" {class: [svc; new]}
+  map: "Category to group\nin code" {class: svc}
+  hook -> cls -> val -> map
+}
+jobs: "Postgres\njobs, decisions" {class: [store; new]}
+triage: "Triage group\n(people)" {class: actor}
+
+zd -> svc.hook: webhook
+svc.hook -> jobs {class: async}
+svc.map -> zd: set group
+svc.val -> triage: "fails validation"

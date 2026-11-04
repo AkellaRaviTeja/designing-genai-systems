@@ -32,12 +32,12 @@ toc: false
     <ul><li>Questions that change the design</li><li>Token, latency and GPU arithmetic</li><li>Twenty optimisations, O1 to O20</li></ul>
     <div class="meta"><span class="chip"><b>6</b>&nbsp;CHAPTERS · ALL WRITTEN</span><span class="open">Open →</span></div>
   </a>
-  <a class="part-card p-text" href="appendix/roadmap.html#part-i-text-in-text-out">
+  <a class="part-card p-text" href="systems/01-ticket-classifier.html">
     <div class="cover"><img src="assets/covers/text.svg" alt=""></div>
     <span class="pk">PART I</span>
     <h3>Text in, text out</h3>
     <ul><li>Classify, summarise, extract</li><li>Batch generation at catalogue scale</li><li>Moderation cascades</li></ul>
-    <div class="meta"><span class="chip"><b>6</b>&nbsp;SYSTEMS · SOON</span><span class="open">Roadmap →</span></div>
+    <div class="meta"><span class="chip"><b>6</b>&nbsp;SYSTEMS · 1 WRITTEN</span><span class="open">Open →</span></div>
   </a>
   <a class="part-card p-retrieval" href="systems/07-simple-rag.html">
     <div class="cover"><img src="assets/covers/retrieval.svg" alt=""></div>

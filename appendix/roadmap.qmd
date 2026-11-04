@@ -10,7 +10,7 @@ cost constraints). Systems marked **written** are in this edition.
 
 | # | System | Level | The new idea it teaches |
 |---|---|---|---|
-| 1 | Support ticket classifier and router | ★ | Structured output, confidence thresholds, when a small model beats a frontier one |
+| 1 | [Support ticket classifier and router](../systems/01-ticket-classifier.qmd) **written** | ★ | Structured output, confidence thresholds, when a small model beats a frontier one |
 | 2 | Meeting and call summariser | ★ | Long context against map-reduce, evaluating summaries |
 | 3 | Catalogue description generator for 2M products | ★ | Batch APIs, bulk generation, sampling QA, brand voice without fine-tuning |
 | 4 | Email reply drafting assistant | ★★ | Personalisation from history, latency budgets, per-user privacy |

@@ -1,0 +1,18 @@
+...@../_theme
+direction: right
+
+cust: Customer {class: actor}
+zd: "Zendesk\nticket created" {class: ext}
+
+svc: Classifier service {
+  class: zone
+  hook: "Webhook receiver" {class: svc}
+  cls: "Haiku 5.5\n'reply with one\ncategory name'" {class: model}
+  map: "Look up\ncategory to group" {class: svc}
+  hook -> cls: ticket text
+  cls -> map: free text
+}
+
+cust -> zd: email or form
+zd -> svc.hook: trigger webhook
+svc.map -> zd: set group

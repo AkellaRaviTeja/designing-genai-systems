@@ -1,0 +1,37 @@
+...@../_theme
+direction: down
+
+cust: Customer {class: actor}
+zd: "Zendesk\ntrigger sets Triage,\ncalls webhook" {class: ext}
+cust -> zd: email, form, chat
+
+svc: Classifier service on Fargate {
+  class: zone
+  hook: "Verify signature,\njob per ticket and run" {class: svc}
+  rules: "Rules: account tier,\nsecurity form" {class: svc}
+  h: "Haiku 5.5, low effort,\ncached prompt, JSON" {class: model}
+  s: "Sonnet 5.5\nwhen gate 1 says no" {class: model}
+  gate: "Validate and gate\nper category" {class: svc}
+  put: "Safe update:\ngroup, tags,\ninternal note" {class: svc}
+  hook -> rules -> h -> gate
+  gate -> s: escalate
+  s -> gate
+  gate -> put: "team, or stays\nin Triage"
+  rules -> put: by rule
+}
+db: "Postgres\njobs, decisions,\nlabels" {class: store}
+
+zd -> svc.hook: webhook
+svc.hook -> db {class: async}
+svc.put -> zd: "team or triage group"
+
+loop: Quality loop {
+  class: zone
+  lab: "Overrides and final\ngroups to review;\npeople label" {class: svc}
+  gs: "Tuning half grows;\nheld-out half frozen" {class: store}
+  ev: "Batch evaluation,\npaired gate in CI" {class: svc}
+  lab -> gs -> ev {class: offline}
+}
+zd -> loop.lab: solved tickets {class: offline}
+db -> loop.lab {class: offline}
+loop.ev -> svc.gate: thresholds {class: offline}
