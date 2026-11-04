@@ -106,7 +106,9 @@ make (any write the question did not ask for), and a reference answer an agent w
 scored on the trajectory first (right tools, valid arguments, no forbidden calls) and on the answer
 second, judged as in [F4](../foundations/f4-evaluation.qmd). At {{< var ch17.task_set >}} tasks a
 rate near 50% carries a 95% interval of about plus or minus {{< var ch17.ci_tasks >}} points, so
-targets here are counts, and versions are compared task by task on the same set.
+targets here are counts, and versions are compared task by task on the same set. Once several
+features run sets like this one, [System 43](43-evaluation-platform.qmd) is the shared platform
+they run on: the judge's calibration, the paired gate and online experiments.
 
 ## Where the tool definitions break
 

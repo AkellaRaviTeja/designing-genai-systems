@@ -305,7 +305,8 @@ redacted, and added to the golden set.
 The golden set runs in CI on every change to prompts, chunking, retrieval settings or the model.
 The gate is paired: run the change and the last release on the same questions, count the questions
 that passed before and fail now, and fail the build if that count exceeds a threshold set in
-advance (3 is this chapter's starting target). The job prints how many questions it ran and fails
+advance (3 is this chapter's starting target; [System 43](43-evaluation-platform.qmd) shows when a
+fixed count stops working and sets the threshold from measured noise instead). The job prints how many questions it ran and fails
 if that number is zero. A gate on the overall score alone would pass a change that fixes five
 questions and breaks five others.
 

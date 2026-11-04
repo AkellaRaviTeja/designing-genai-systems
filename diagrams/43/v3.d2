@@ -1,0 +1,21 @@
+...@../_theme
+direction: right
+
+traces: "Feature traces\n(F6)" {class: store}
+sampler: "Sampler\nby slice" {class: [svc; new]}
+judge: "Judge, batch" {class: model}
+queue: "Review queue" {class: [queue; new]}
+experts: "Domain experts" {class: actor}
+suite: "Suites, sliced,\nversioned" {class: [store; new]}
+cover: "Coverage report:\ntraffic vs suite" {class: [svc; new]}
+owners: "Feature owners" {class: actor}
+
+traces -> sampler: "daily" {class: offline}
+sampler -> judge {class: offline}
+sampler -> queue: "targeted\nby slice" {class: offline}
+queue -> experts
+experts -> suite: "masked\nexamples"
+traces -> cover {class: offline}
+suite -> cover {class: offline}
+cover -> owners: "weekly" {class: async}
+judge -> owners: "daily score\nby slice" {class: async}

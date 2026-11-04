@@ -1,0 +1,18 @@
+...@../_theme
+direction: right
+
+ci: "Pull request" {class: actor}
+runner: "Eval runner" {class: svc}
+base: "Release run,\nreplaced on merge" {class: [store; new]}
+aa: "Weekly A/A run" {class: [svc; new]}
+batch: "Batch APIs" {class: [ext; new]}
+gate: "Paired gate:\nper slice, Holm" {class: [svc; new]}
+flip: "Flip rate\nper slice" {class: [store; new]}
+
+ci -> runner: "candidate only"
+runner -> gate
+base -> gate
+aa -> batch: "release config" {class: offline}
+batch -> flip {class: offline}
+flip -> gate: "sets slice sizes" {class: async}
+gate -> ci: "fail, pass,\nor too few" {class: async}

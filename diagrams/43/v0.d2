@@ -1,0 +1,18 @@
+...@../_theme
+direction: right
+
+ci: "Pull request\nor nightly job" {class: actor}
+runner: "Eval runner" {class: svc}
+sets: "Golden set\nper feature repo" {class: store}
+gw: "Gateway,\noffline class" {class: svc}
+sys: "Sonnet 5.5:\nfeature under test" {class: model}
+judge: "Judge:\nGPT-6.1 Terra" {class: model}
+scores: "One score\nper run" {class: store}
+
+ci -> runner
+sets -> runner: "200 examples" {class: offline}
+runner -> gw
+gw -> sys
+gw -> judge
+runner -> scores
+scores -> ci: "pass if under\nthreshold" {class: async}

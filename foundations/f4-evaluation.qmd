@@ -76,6 +76,8 @@ component that also needs evaluating.
   about as well as people agree with each other, use it. This book's bar, a judgement rather than
   a standard, is a kappa of 0.6 or more.
   If not, fix the rubric before trusting any number it produces.
+  [System 43](../systems/43-evaluation-platform.qmd) goes one step further: it measures the judge's
+  sensitivity and specificity against the agreed labels and corrects every score with them.
 - **Give it a rubric, not a vibe.** "Correct means every factual claim in the answer appears in
   the sources and none contradicts them" is gradeable. "Is this a good answer?" is not.
 
@@ -88,7 +90,8 @@ on Claude Sonnet 5.5. Cheap enough to run on every pull request that touches a p
 Treat prompts, model versions, retrieval settings and tool definitions as code. A change to any
 of them runs the evaluation in CI on the same examples as the last release, and the gate is
 paired: count the examples that passed before and fail now, and fail the build if that count is
-above a threshold you set in advance. Comparing two overall scores against the noise level hides a
+above a threshold you set in advance
+([System 43](../systems/43-evaluation-platform.qmd) sets it from the measured noise, per slice). Comparing two overall scores against the noise level hides a
 change that fixes five examples and breaks five others. Report the count of examples evaluated
 with the result, and fail if the count is zero: an evaluation that examined nothing did not pass.
 
