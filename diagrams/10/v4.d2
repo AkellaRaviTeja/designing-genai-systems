@@ -1,0 +1,20 @@
+...@../_theme
+direction: down
+
+asker: Asker {class: actor}
+viewer: Colleague with a shared link {class: actor}
+
+app: Ask service {
+  class: zone
+  conv: "Conversation state\nkeyed by tenant and user,\npage IDs per turn" {class: [store; new]}
+  turn: "New turn: re-check\npages behind the history" {class: [svc; new]}
+  share: "Shared answer: re-check\ncited pages as the viewer" {class: [svc; new]}
+  again: "Ask again as the viewer" {class: [svc; new]}
+  turn -> conv
+  share -> again: some pages unreadable
+}
+perm: "Lanternly app database" {class: store}
+asker -> app.turn: follow-up
+viewer -> app.share: open link
+app.turn -> perm
+app.share -> perm

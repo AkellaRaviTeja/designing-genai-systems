@@ -1,0 +1,24 @@
+...@../_theme
+direction: down
+
+admin: Workspace admin {class: actor}
+appdb: "Lanternly app database\npermission change\n+ outbox row" {class: store}
+q: Permission change events {class: [queue; new]}
+sync: "ACL sync worker\nversioned page_acl rows\nfor the page subtree" {class: [svc; new]}
+idx: "page_acl readers[]" {class: store}
+
+admin -> appdb: restrict a page
+appdb -> q {class: async}
+q -> sync {class: async}
+sync -> idx {class: async}
+
+app: Ask service {
+  class: zone
+  ret: "Retrieve with\nreaders filter" {class: svc}
+  rrf: Rank fusion {class: svc}
+  chk: "Re-check fused pages\nagainst the app database" {class: [svc; new]}
+  rr: Rerank survivors {class: ext}
+  ret -> rrf -> chk -> rr
+}
+app.ret -> idx
+app.chk -> appdb: one batched query

@@ -1,0 +1,22 @@
+...@../_theme
+direction: down
+
+user: Member of a workspace {class: actor}
+
+app: Ask service {
+  class: zone
+  api: "Ask API" {class: svc}
+  tx: "Open transaction:\nSET LOCAL app.tenant_id" {class: [svc; new]}
+  ret: "Dense + keyword,\nno tenant clause needed" {class: svc}
+  api -> tx -> ret
+}
+db: Postgres {
+  class: zone
+  rls: "Row-level security\non parent and every partition" {class: [svc; new]}
+  pool: "Pooled partition\nsmall tenants, exact scan" {class: [store; new]}
+  ded: "Dedicated partitions\none per large tenant, HNSW" {class: [store; new]}
+  rls -> pool
+  rls -> ded
+}
+user -> app.api: question
+app.ret -> db.rls

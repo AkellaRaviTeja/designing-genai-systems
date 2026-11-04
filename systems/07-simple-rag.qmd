@@ -34,7 +34,7 @@ brief, and the vaguest.
 |---|---|---|
 | How many pages, in what formats? | Below about {{< var ch07.lc_threshold >}} tokens the whole corpus fits in one prompt and you need no retrieval at all (see Variants) | 8,000 Confluence pages, mostly prose, some tables. About 300 PDFs exist too; the pilot leaves them out, because they need a layout parser (System 11) |
 | How often do pages change? | Decides whether ingestion is a one-off job or a continuous sync | A few hundred edits a week; policies change a few times a year |
-| Can everyone read every page? | If not, retrieval must filter by the asker's permissions, which is a different system (System 10 in the [roadmap](../appendix/roadmap.qmd)) | Pilot covers only spaces readable by all staff. HR casework, salary bands and legal stay out |
+| Can everyone read every page? | If not, retrieval must filter by the asker's permissions, which is a different system ([System 10](10-multi-tenant-rag.qmd)) | Pilot covers only spaces readable by all staff. HR casework, salary bands and legal stay out |
 | What does a wrong answer cost? | Decides how hard we work on grounding, citations and refusing | Moderate: someone files a wrong claim or misses a deadline. Annoying, not dangerous |
 | Is "I don't know" acceptable? | A system allowed to refuse can avoid answers it cannot support | Yes, if it points to where the answer might be |
 | Where do people ask? | A separate web page competes with the channel people already use | Slack |
@@ -519,7 +519,7 @@ known healthy ranges.
 
 **If some pages are restricted.** Retrieval must filter by what the asking user may read, using
 permissions synced from the source system, before anything reaches the prompt. Per-user ACL
-filters, permission sync lag and the cost of re-checking permissions are the subject of System 10
+filters, permission sync lag and the cost of re-checking permissions are the subject of [System 10](10-multi-tenant-rag.qmd)
 (multi-tenant RAG) and System 16 (enterprise search).
 
 **If exact terms matter more.** For IT error codes, part numbers and legal clause numbers, add

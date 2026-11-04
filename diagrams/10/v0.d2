@@ -1,0 +1,24 @@
+...@../_theme
+direction: down
+
+user: Member of a workspace {class: actor}
+
+app: Ask service, System 8's pipeline {
+  class: zone
+  api: "Ask API\ntenant from the session" {class: svc}
+  dense: "Dense top 50\nWHERE tenant_id = ?" {class: svc}
+  kw: "Keyword top 50\nWHERE tenant_id = ?" {class: svc}
+  rrf: Rank fusion {class: svc}
+  rr: Rerank 30 {class: ext}
+  gen: "Grounded answer\nHaiku 5.5" {class: model}
+  api -> dense
+  api -> kw
+  dense -> rrf
+  kw -> rrf
+  rrf -> rr -> gen
+}
+db: "Postgres, one shared table\nchunks of every tenant,\none HNSW index" {class: store}
+user -> app.api: question
+app.dense -> db
+app.kw -> db
+app.gen -> user: answer + sources
