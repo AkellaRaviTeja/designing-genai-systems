@@ -153,7 +153,7 @@ new requests still wait their turn. You would see this as assistant p95 time to 
 
 [**Changed** an inference gateway with priority classes, two fixed replica pools, priority scheduling on every replica, and a batch queue drained by workers that back off under interactive load.]{.changed}
 
-**A gateway in front of the replicas.** Every caller gets a key, a workload class and a quota. The
+**A [gateway](36-llm-gateway.qmd) in front of the replicas.** Every caller gets a key, a workload class and a quota. The
 gateway meters tokens per key (the platform's cost attribution), enforces rate limits, and routes
 by class.
 
@@ -407,7 +407,8 @@ tenants' samples.
   replica in a pool draining at a time.
 - **Gateway:** stateless, three replicas across availability zones, so a zone loss leaves it
   serving the GPUs in the other. Envoy AI Gateway (now renamed Agent Router), LiteLLM, whose proxy
-  has virtual keys with spend tracking and per-key rate limits, or a small custom service all fit.
+  has virtual keys with spend tracking and per-key rate limits, or a small custom service all fit
+  ([System 36](36-llm-gateway.qmd) designs the shared gateway and what each of these does).
   Check whether your choice can set vLLM's per-request priority and route by session; expect to
   write some of that yourself.
 - **Scaling:** KEDA's Prometheus scaler drives each pool from its own query (waiting requests and

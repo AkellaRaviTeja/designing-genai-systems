@@ -530,7 +530,8 @@ The assistant runs in AWS Mumbai beside System 1's classifier, and adds little.
 - **Tokens and secrets.** The console passes the agent's SSO token to the service for the life of a
   task; the service never stores it. The only long-lived secret is the Anthropic key, in the
   secrets manager. One key serves every agent, so its blast radius is the model bill, not the data:
-  it cannot call a Paybridge API. A spend limit on the key and the hourly cost alert from F6 bound it.
+  it cannot call a Paybridge API. A spend limit on the key and the hourly cost alert from F6 bound it; behind a shared
+[gateway](36-llm-gateway.qmd) the key would live there instead.
 - **Fixtures.** The task set's recorded responses are masked at capture and stored with the test
   code, so CI never calls the live APIs and never needs a token that could write.
 - **Configuration** holds the step budget, the result cap, the retry limits, a flag per agent for the

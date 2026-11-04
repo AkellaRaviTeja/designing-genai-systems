@@ -18,7 +18,7 @@ Read it online at `https://akellaraviteja.github.io/designing-genai-systems/` on
 | Retrieval | 07 Simple RAG over a company wiki ★★ · 08 Production RAG: hybrid search and reranking ★★★ · 09 Conversational RAG with follow-ups ★★ · 10 Multi-tenant RAG for a SaaS product ★★★ |
 | Agents and tools | 17 Tool-calling assistant ★★ |
 | Real-time and conversational | 28 Call-centre voice agent ★★★★ |
-| The model platform | 39 Self-hosted inference platform ★★★★ |
+| The model platform | 36 LLM gateway ★★★ · 39 Self-hosted inference platform ★★★★ |
 | Appendices | The roadmap of all fifty systems · Prices |
 
 ## How the book stays honest

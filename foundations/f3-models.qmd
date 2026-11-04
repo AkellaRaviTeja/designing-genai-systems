@@ -74,7 +74,7 @@ Before running any evaluation, these questions often shrink the list:
 | Does the task need tools, images, audio or very long context? | Rules out models that lack the modality or context length |
 | Is a person waiting for the answer? | Rules out slow reasoning settings for the interactive path |
 | Do we need to fine-tune? | Pushes towards open weights or vendors that offer tuning on the model you want |
-| What happens if this vendor has an outage or changes the price? | Argues for keeping a tested second choice behind a gateway |
+| What happens if this vendor has an outage or changes the price? | Argues for keeping a tested second choice behind a [gateway](../systems/36-llm-gateway.qmd) |
 
 ## Reasoning effort is a second dial
 

@@ -522,7 +522,8 @@ do not use; a key by turns alone would let a large, quiet workspace occupy a sha
 
 **Limit by tenant.** The Ask API applies a token-bucket rate limit per tenant, sized from its seats
 and capped so that no single tenant may use more than a fixed share of the organisation's limits (a
-tenth, say), and a monthly turn quota per plan with a warning at 80%. A script then hits its own
+tenth, say), and a monthly turn quota per plan with a warning at 80% (the same buckets a shared
+[gateway](36-llm-gateway.qmd) keeps per feature). A script then hits its own
 tenant's limit before it can take the organisation's. The buckets of many tenants added together can
 still exceed the organisation's limits when they burst at once; the 429 alert is there for that. Evaluation and leak-suite runs use a separate Anthropic
 workspace whose limits are set below the organisation's (Anthropic's rate-limit documentation allows

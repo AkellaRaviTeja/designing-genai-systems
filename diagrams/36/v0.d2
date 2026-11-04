@@ -1,0 +1,20 @@
+...@../_theme
+direction: right
+
+apps: "Five features,\nfour teams" {class: actor}
+
+gw: Gateway {
+  class: zone
+  auth: "Internal key\nper team" {class: svc}
+  proxy: "Pass through,\nlog tokens" {class: svc}
+  auth -> proxy
+}
+
+anth: "Claude API\none key" {class: ext}
+oai: "OpenAI API\none key" {class: ext}
+logs: "Request log" {class: store}
+
+apps -> gw.auth: "same request\nshape as provider"
+gw.proxy -> anth
+gw.proxy -> oai: judge calls
+gw.proxy -> logs {class: async}

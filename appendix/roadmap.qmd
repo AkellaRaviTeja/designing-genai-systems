@@ -70,7 +70,7 @@ cost constraints). Systems marked **written** are in this edition.
 
 | # | System | Level | The new idea it teaches |
 |---|---|---|---|
-| 36 | LLM gateway | ★★★ | Multi-provider fallback, quotas, key management, cost attribution |
+| 36 | [LLM gateway](../systems/36-llm-gateway.qmd) **written** | ★★★ | Multi-provider fallback, quotas, key management, cost attribution |
 | 37 | Prompt cache and semantic cache layer | ★★ | Hit-rate arithmetic, false hits, invalidation |
 | 38 | Model selection and routing | ★★★ | Evaluation-driven choice, cascades, learned routers |
 | 39 | [Self-hosted inference platform](../systems/39-self-hosted-inference.qmd) **written** | ★★★★ | GPU sizing, batching, quantisation, autoscaling, the break-even with APIs |
