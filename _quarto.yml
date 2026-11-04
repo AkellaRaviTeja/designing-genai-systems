@@ -41,6 +41,9 @@ book:
         - foundations/f4-evaluation.qmd
         - foundations/f5-optimisation.qmd
         - foundations/f6-safety-observability.qmd
+    - part: "Text in, text out"
+      chapters:
+        - systems/01-ticket-classifier.qmd
     - part: "Retrieval"
       chapters:
         - systems/07-simple-rag.qmd

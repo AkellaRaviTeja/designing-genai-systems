@@ -1,0 +1,21 @@
+...@../_theme
+direction: right
+
+zd: "Zendesk" {class: ext}
+
+svc: Classifier service {
+  class: zone
+  rules: "Rules first:\naccount tier, form" {class: [svc; new]}
+  cls: "Haiku 5.5\nstructured output" {class: model}
+  gate: "Gate: confidence level\nand category enabled" {class: [svc; new]}
+  rules -> cls -> gate
+}
+golden: "Golden set\n1,200 labelled tickets,\ntune and held-out halves" {class: [store; new]}
+team: "Team queue" {class: svc}
+triage: "Triage group\nwith suggestion" {class: actor}
+
+zd -> svc.rules: webhook
+svc.gate -> team: "above threshold"
+svc.gate -> triage: "below threshold\nor unclear"
+golden -> svc.gate: "sets thresholds" {class: offline}
+svc.rules -> team: "enterprise or\nsecurity form"
