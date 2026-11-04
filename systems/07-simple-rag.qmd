@@ -541,7 +541,7 @@ each language, and expect two to four times as many tokens per answer
 
 **If people ask follow-up questions in a thread.** The follow-up "and for contractors?" means
 nothing on its own; rewrite it into a standalone question using the thread before retrieving. That
-is System 9.
+is [System 9](09-conversational-rag.qmd).
 
 ## Trade-offs
 

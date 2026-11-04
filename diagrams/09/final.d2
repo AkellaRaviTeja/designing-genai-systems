@@ -1,0 +1,38 @@
+...@../_theme
+direction: down
+
+conf: Confluence API {class: ext}
+user: Employee in Slack {class: actor}
+
+ingest: Ingestion, as System 7 {
+  class: zone
+  sync: "Sync, parse, embed\nevery 15 min + daily reconcile" {class: svc}
+}
+conf -> ingest.sync {class: offline}
+
+db: "Postgres\nchunks, vectors, metadata,\nthread state" {class: store}
+ingest.sync -> db {class: offline}
+
+app: Answer service {
+  class: zone
+  bot: "Slack handler\nack, dedupe, placeholder" {class: svc}
+  cond: "Condense follow-ups\nHaiku, 800 ms deadline" {class: model}
+  ret: "Retrieve, filter,\none chunk per page" {class: svc}
+  gen: "Grounded answer\nSonnet 5.5" {class: model}
+  chk: "Citation and\ngrounding checks" {class: svc}
+  upd: "Store turn, strip markers,\nfold into summary" {class: svc}
+  bot -> cond -> ret -> gen -> chk
+  chk -> upd {class: async}
+}
+user <-> app.bot: "question or follow-up,\nanswer in thread"
+app.ret -> db
+app.cond -> db: thread state
+app.upd -> db {class: async}
+
+ops: Quality loop {
+  class: zone
+  gs: "Golden set + conversation set\nfirst turns, follow-ups,\ntopic switches" {class: store}
+  ci: Paired gate in CI {class: svc}
+  gs -> ci {class: async}
+}
+app.bot -> ops.gs: traces, feedback {class: async}
