@@ -90,8 +90,8 @@ problem and are excluded from this golden set.
 
 ![Version 0: System 7's design, unchanged, over the operations corpus.](../images/08/v0.svg){fig-alt="Version 0. Ingestion every 15 minutes parses Confluence, SOP PDFs and carrier manuals by heading, embeds chunks and writes them to Postgres with pgvector. The query path embeds the question, takes the top 5 chunks by cosine similarity, generates a grounded answer and runs the citation check."}
 
-A golden set measures it. System 7's 150 questions gave an uncertainty of about plus or minus 8
-points, too coarse to tell a good reranker from a mediocre one, so this one has 400: about plus or
+A golden set measures it. System 7's 150 questions give an uncertainty of up to plus or minus 8
+points, too coarse to tell a good reranker from a mediocre one, so this one has 400: up to plus or
 minus 5 points overall ([F4](../foundations/f4-evaluation.qmd)). The questions come from three
 months of the support desk's internal chat and the hub teams' channels, and they are split into four
 slices, because a single average would hide exactly the failure the brief describes:
@@ -192,7 +192,7 @@ by Cormack, Clarke and Büttcher. A document missing from a list gets nothing fr
 The constant k is what makes this work: at k = 60, rank 1 is worth only about 1.13 times rank 9
 (69/61), so a document that both retrievers rank moderately well beats one that only one
 retriever loves. Fusion takes the top 50 from each list and sends the top 5 fused chunks to the
-model, keeping System 7's rule of at most one chunk set per page.
+model, keeping System 7's rule of at most one chunk per page.
 
 The vector, the `tsvector` and the identifiers for a chunk are written in one transaction by the
 same ingestion worker. Running keyword search in a separate engine would have meant two indexes that
