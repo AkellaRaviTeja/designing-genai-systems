@@ -1,0 +1,23 @@
+...@../_theme
+direction: down
+
+user: Employee in a thread {class: actor}
+db: "Postgres + pgvector" {class: store}
+state: "Thread state\nsummary, last 3 turns,\nlast standalone question" {class: [store; new]}
+
+app: Answer service {
+  class: zone
+  bot: Slack handler {class: svc}
+  cond: "Condense: standalone question,\nnew-topic flag, intent" {class: [model; new]}
+  emb: Embed standalone question {class: model}
+  gen: "Grounded answer:\nsummary + last 3 turns\nas text, new chunks" {class: [model; new]}
+  sum: "Fold oldest turn\ninto summary" {class: [model; new]}
+  bot -> cond -> emb
+  cond -> gen
+  gen -> sum {class: async}
+}
+user -> app.bot: follow-up
+app.cond <- state
+app.emb -> db: top 5
+app.sum -> state {class: async}
+app.gen -> user: answer in thread

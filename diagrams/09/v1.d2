@@ -1,0 +1,22 @@
+...@../_theme
+direction: down
+
+user: Employee in a thread {class: actor}
+slack: Slack API {class: ext}
+db: "Postgres + pgvector" {class: store}
+
+app: Answer service {
+  class: zone
+  bot: Slack handler {class: svc}
+  thr: "Fetch thread\nconversations.replies" {class: [svc; new]}
+  emb: "Embed the whole\nthread text" {class: [model; new]}
+  gen: "Grounded answer:\nall earlier turns\nwith their chunks" {class: [model; new]}
+  chk: Checks {class: svc}
+  bot -> thr -> emb
+  thr -> gen
+  gen -> chk
+}
+user -> app.bot: follow-up
+app.thr -> slack
+app.emb -> db: top 5
+app.chk -> user: answer in thread

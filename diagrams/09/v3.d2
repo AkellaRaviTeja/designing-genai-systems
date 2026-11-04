@@ -1,0 +1,16 @@
+...@../_theme
+direction: down
+
+user: Employee in a thread {class: actor}
+state: "Thread state\nanswers stored without\ncitation markers" {class: store}
+
+app: Answer service {
+  class: zone
+  gen: "Grounded answer:\ncite only this turn's\nnumbered sources" {class: model}
+  strip: "Store answer with\nmarkers replaced\nby page titles" {class: [svc; new]}
+  chk: "Citation check:\nmarkers in range of\nthis turn's sources" {class: [svc; new]}
+  gen -> chk -> strip
+}
+state -> app.gen: history as plain text
+app.strip -> state {class: async}
+app.chk -> user: answer in thread

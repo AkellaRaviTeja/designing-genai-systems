@@ -574,7 +574,7 @@ scores questions against them without a separate reranking call, at the price of
 unless the vectors are compressed.
 
 **If people ask follow-ups.** "And if it shows 4013 instead?" must be rewritten into a standalone
-question before retrieval. The rewrite stage built here is where that happens; System 9 covers it.
+question before retrieval. The rewrite stage built here is where that happens; [System 9](09-conversational-rag.qmd) covers it.
 
 **If some documents were restricted.** Both retrievers must apply the same permission filter before
 fusion, or the reranker will see, and the trace store will record, passages the user may not read.

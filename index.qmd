@@ -44,7 +44,7 @@ toc: false
     <span class="pk">PART II</span>
     <h3>Retrieval</h3>
     <ul><li>From naive RAG to grounded answers</li><li>Hybrid search, GraphRAG, enterprise search</li><li>Text-to-SQL and code search</li></ul>
-    <div class="meta"><span class="chip"><b>10</b>&nbsp;SYSTEMS · 2 WRITTEN</span><span class="open">Open →</span></div>
+    <div class="meta"><span class="chip"><b>10</b>&nbsp;SYSTEMS · 3 WRITTEN</span><span class="open">Open →</span></div>
   </a>
   <a class="part-card p-agents" href="appendix/roadmap.html#part-iii-agents-and-tools">
     <div class="cover"><img src="assets/covers/agents.svg" alt=""></div>

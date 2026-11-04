@@ -1,0 +1,23 @@
+...@../_theme
+direction: down
+
+user: Employee in a thread {class: actor}
+
+path: Follow-up critical path {
+  class: zone
+  bot: "Ack, post placeholder" {class: svc}
+  first: "First turn?\nskip condensing" {class: [svc; new]}
+  cond: "Condense on Haiku\n800 ms deadline" {class: [model; new]}
+  fall: "Fallback retrieved in parallel:\nlast standalone question\n+ this message" {class: [svc; new]}
+  ret: Embed and retrieve {class: svc}
+  gen: Grounded answer {class: model}
+  bot -> first
+  first -> ret: yes
+  first -> cond: no
+  cond -> ret
+  cond -> fall: late {class: hot}
+  fall -> ret {class: hot}
+  ret -> gen
+}
+user -> path.bot: follow-up
+path.gen -> user: answer replaces placeholder

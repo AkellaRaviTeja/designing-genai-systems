@@ -1,0 +1,19 @@
+...@../_theme
+direction: down
+
+user: Employee in a thread {class: actor}
+db: "Postgres + pgvector" {class: store}
+
+app: System 7, unchanged {
+  class: zone
+  bot: Slack handler {class: svc}
+  emb: Embed this message only {class: model}
+  gen: Grounded answer {class: model}
+  chk: Citation and grounding checks {class: svc}
+  bot -> emb
+  bot -> gen: "message + 5 chunks"
+  gen -> chk
+}
+user -> app.bot: '"and for contractors?"'
+app.emb -> db: top 5 {class: hot}
+app.chk -> user: answer in thread
