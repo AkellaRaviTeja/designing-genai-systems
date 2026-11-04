@@ -479,13 +479,14 @@ f:
   f2:
     decode_ceiling_70_fp8_tp2: "95"
     h100_bw: "3.35"
+    h100_fp8: "1,979"
     kv70_8k_gb: "2.7"
     kv70_kb: "320"
     kv8_kb: "128"
     out_share: "50%"
     p5_hour: "$55.04"
     p5_month: "$40,000"
-    prefill_tok_s: "5,600"
+    prefill_tok_s: "14K"
     req_in: "$0.004"
     req_month: "$8,000"
     req_out: "$0.004"
@@ -493,6 +494,12 @@ f:
     w70_fp16: "141"
     w70_fp8: "71"
     w70_int4: "35"
+  f4:
+    judge_run: "$4.00"
+  f5:
+    h100_gpu_hour: "$6.88"
+    h100_l4_ratio: "8.5"
+    l4_hour: "$0.80"
   fable:
     in: "$10.00"
     out: "$50.00"
@@ -504,6 +511,8 @@ f:
     out: "$20.00"
   ratio:
     frontier_small: "100"
+    out_in_high: "8.3"
+    out_in_low: "5"
   sonnet:
     in: "$2.00"
     out: "$10.00"

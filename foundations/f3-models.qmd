@@ -3,8 +3,10 @@ title: "F3 · Choosing a model"
 description: "Pick the cheapest model that clears your quality bar on your own task, and keep the harness that proved it."
 ---
 
-The model is the most expensive component in most GenAI systems, and the one whose choice moves
-quality the most. The rule this book follows everywhere: **choose the cheapest model that clears
+The model is the largest lever on cost per request: the frontier tier's input price is
+{{< var f.ratio.frontier_small >}} times the small tier's. It is often not the largest line on the
+bill (Systems 7 and 8 show databases and rerankers outgrowing it), but no other choice moves the
+variable cost as far. The rule this book follows everywhere: **choose the cheapest model that clears
 your quality bar on your own task, measured on your own examples.** Everything else in this chapter
 is how to do that without fooling yourself.
 
@@ -18,8 +20,8 @@ There are three ways to get a model, and within each, a ladder of sizes.
 | Hosted open-weight API (Together, Fireworks, Groq) | Tokens, usually cheaper | An open model is good enough and you want API simplicity | You need guarantees on data handling that the provider cannot give, or the model you want is not on their menu |
 | Self-hosted open weights | GPU hours and people | Volume is high and steady, or data must stay on your hardware, or you need a fine-tuned model served cheaply | Traffic is spiky or small, or nobody on the team wants to carry a pager for GPUs |
 
-Self-hosting has a break-even point, and it is further out than most teams think once you count
-idle capacity and engineering time. [System 39](../systems/39-self-hosted-inference.qmd) works it
+Self-hosting has a break-even point, and finding it honestly means counting idle capacity and
+engineering time, not just the price per GPU-hour. [System 39](../systems/39-self-hosted-inference.qmd) works it
 out in detail.
 
 ## The current price ladder
@@ -37,9 +39,9 @@ Open-weight models through hosted APIs:
 
 : Hosted open-weight model prices, USD per million tokens.
 
-Read the table as orders of magnitude rather than as a ranking. The small tier is roughly a
-hundred times cheaper than the frontier tier. Within a tier, prices cluster, and the differences
-between vendors are smaller than the differences in how many tokens each needs for the same task.
+Read the table as orders of magnitude rather than as a ranking. Claude Haiku 5.5's input price is
+one {{< var f.ratio.frontier_small >}}th of Claude Fable 5.1's. Within a tier, prices cluster, and
+vendors' tokenisers differ, so compare cost per task on the same inputs, not price per token.
 
 ## Choosing, step by step
 
@@ -54,13 +56,13 @@ be.
 
 **3. Run three to five candidates.** One from each tier, plus the obvious alternatives in the tier
 you expect to land in. Use the same prompt, then give each candidate one round of prompt tuning,
-because prompts written for one model are rarely optimal for another.
+because a prompt written for one model may not suit another.
 
 **4. Plot cost against score.** Each candidate is a point. The ones worth considering lie on the
 frontier, where no other model is both cheaper and better. Pick the cheapest point above the bar.
 
-**5. Keep the harness.** New models ship every few weeks. With the golden set and the script, a
-re-evaluation takes an afternoon. Without them, you are back to reading leaderboards.
+**5. Keep the harness.** New models ship often. With the golden set and the script, a
+re-evaluation is a rerun, not a project. Without them, you are back to reading leaderboards.
 
 ## Questions that rule models in or out
 
@@ -78,8 +80,8 @@ Before running any evaluation, these questions often shrink the list:
 
 Current frontier and workhorse models think before answering, and most APIs expose how hard they
 think as an effort or budget setting. Thinking tokens are billed as output. That makes effort a
-cost dial inside one model: a workhorse model at low effort is often good enough for chat and
-extraction, while the same model at high effort handles a coding task. Before building a router
+cost dial inside one model: a workhorse model at low effort may be good enough for chat and
+extraction, and the same model at high effort for a coding task; the golden set says which. Before building a router
 that sends easy requests to a small model and hard ones to a big one, measure the simpler
 alternative: one model with effort set per route. One model also means one prompt cache, which
 matters more than it looks (see <span class="ocode">O1</span>).
@@ -88,12 +90,14 @@ matters more than it looks (see <span class="ocode">O1</span>).
 
 - **Choosing by leaderboard.** Public benchmarks measure someone else's task. They are a filter for
   the shortlist, never the decision.
-- **Using the frontier model everywhere.** Classification, routing, extraction and most summarising
-  run as well on the small tier at a hundredth of the price. Measure before assuming you need more.
-- **Comparing price per token across vendors.** Tokenisers differ. The same prompt can be 20% more
-  tokens on one vendor than another. Compare cost per task on your golden set.
-- **Upgrading without re-running the evaluation.** A newer model is usually better on average and
-  sometimes worse on your task, especially on formatting and instruction-following details your
+- **Using the frontier model everywhere.** Classification, routing, extraction and summarising are
+  worth testing on the small tier first, at one {{< var f.ratio.frontier_small >}}th of the input
+  price. Measure before assuming you need more.
+- **Comparing price per token across vendors.** Tokenisers differ, so the same prompt is a
+  different number of tokens on each vendor. Count them with each vendor's token-counting endpoint
+  and compare cost per task on your golden set.
+- **Upgrading without re-running the evaluation.** A newer model can be better on public
+  benchmarks and worse on your task, including on formatting and instruction-following details your
   parser depends on.
 - **Forgetting announced price changes.** Two of the models in the table above have announced
   increases. A cost model built on today's price and deployed for a year should use the price that

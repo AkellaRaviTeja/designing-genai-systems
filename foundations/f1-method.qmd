@@ -6,8 +6,9 @@ description: "How every chapter in this book arrives at an architecture, and how
 A GenAI system is designed the way any system is designed, with three differences that change
 almost every decision. The component doing the work is **probabilistic**, so you cannot assert that it
 is correct; you have to measure it. It is **priced per call**, so cost is a variable on every request
-rather than a fixed line for servers. And it is **slow**: one model call takes longer than every
-other hop in the request put together, so the latency budget is spent before you start.
+rather than a fixed line for servers. And it is **slow**: at the planning figures in
+[F2](f2-numbers.qmd), one model call takes seconds, where the other hops in a request take
+milliseconds, so most of the latency budget is spent before you start.
 
 This chapter sets out the method the rest of the book follows. Every system chapter uses the same
 headings in the same order, so once you have read one you can jump to the part you need in any
@@ -15,12 +16,12 @@ other.
 
 ## Why arrive at the design step by step
 
-You could open each chapter with the finished architecture diagram. Most writing on this topic
-does. It is the least useful thing to show, for two reasons.
+You could open each chapter with the finished architecture diagram. It is the least useful thing
+to show, for two reasons.
 
 First, a finished diagram hides the reasons. A reranker sits between retrieval and generation.
-Why? Because the first version retrieved twenty chunks to get recall, the model got confused by
-the fifteen irrelevant ones, and the bill was paying for all twenty. Take the reason away and the
+Why? Because retrieving twenty chunks to get recall gives the model fifteen irrelevant ones to
+ignore, and the bill pays for all twenty. Take the reason away and the
 reranker is decoration. A reviewer will ask "why is that there?" and you need the answer.
 
 Second, the finished design is wrong for most readers. Your corpus is smaller, your users are more
@@ -28,9 +29,10 @@ forgiving, your compliance team is stricter. If you know which failure each comp
 know which components you can leave out. If you only know the final picture, you copy all of it.
 
 So every chapter starts with the simplest thing that could work, called version 0, and then
-breaks it. Each break cites evidence: an evaluation score, a load test, a line on the cost
-estimate, a latency budget that does not add up. Each fix is the smallest change that addresses
-that evidence. The final design is where the sequence stops, which is when the remaining failures
+breaks it. Each break names the failure, why it happens, and how you would see it: a line on the
+cost estimate or a latency budget that does not add up, where arithmetic can show it, and
+otherwise the evaluation metric to watch and the target it would miss. Each fix is the smallest
+change that addresses that failure, with what to measure before keeping it. The final design is where the sequence stops, which is when the remaining failures
 are cheaper to live with than to fix.
 
 ## The loop
@@ -41,7 +43,7 @@ are cheaper to live with than to fix.
 | Questions | A table of questions and the assumptions you will design to | What is actually required? |
 | The numbers | Traffic, tokens, storage, money, with arithmetic | How big is this, and where will it hurt? |
 | Version 0 | The simplest design and its diagram | What is the least we could build? |
-| Where it breaks | Evidence that version N fails a requirement | What is wrong with it, specifically? |
+| Where it breaks | The failure, and the arithmetic or metric that shows it | What is wrong with it, specifically? |
 | Version N+1 | The smallest change that fixes it | What do we add, and what does it cost? |
 | Final design | Full diagram, component table | What are we building? |
 | Deployment | Topology, regions, scaling | Where does it run? |
@@ -52,8 +54,8 @@ are cheaper to live with than to fix.
 | Trade-offs | Decision, alternative, reason | What did we give up? |
 
 In an interview you will not get through all of it. Spend your time on the questions, the
-numbers and the first two breaks. Those are where judgement shows. Anyone can draw the final
-diagram from memory; few people can explain why version 1 was not enough.
+numbers and the first two breaks. Those are where judgement shows. A final diagram can be
+recalled from memory; explaining why version 1 was not enough cannot.
 
 ## Asking the questions
 
@@ -110,13 +112,15 @@ The prices in this edition were checked on {{< var prices.as_of >}}. The appendi
 Naming a vendor is not a recommendation. Where a chapter uses one provider's price, it is because
 the arithmetic needs a number; the comparison tables show the alternatives.
 
-## Worked scenarios are illustrative
+## Worked scenarios supply inputs, never results
 
-Each chapter follows one organisation through the design. When a chapter says "the first
-evaluation run scores 61% on the golden set", that is a worked scenario, chosen to be typical of
-what teams see, not a measurement of a real system. The chapter says so the first time. The
-arithmetic, the prices and the mechanisms are real; the scenario is there so the reasoning has
-something concrete to push against.
+Each chapter follows one organisation through the design. The organisation is invented, and so are
+its inputs: head counts, traffic, corpus size, a latency target. Each chapter says so the first
+time. Nothing in this book was measured, so no chapter reports a result as if it had been: no
+evaluation scores, no observed latencies, no speedups. Where a result would decide a design step,
+the chapter says what to measure and the target that would justify the step. The arithmetic, the
+prices and the mechanisms are real; the scenario is there so the reasoning has something concrete
+to push against.
 
 ## Reading the diagrams
 
@@ -150,5 +154,6 @@ There are three ways through the book:
 Optimisations are catalogued once, in [F5](f5-optimisation.qmd), with codes O1 to O20. Chapters
 cite them by code, for example <span class="ocode">O1</span> for prompt caching, and give the
 saving for that system rather than re-explaining the technique. The point of the catalogue is
-that the same twenty techniques do almost all of the work in almost every system. What differs is
+that the same twenty techniques cover most of the cost and latency work in every system in this
+book. What differs is
 which ones apply and how much each one saves.

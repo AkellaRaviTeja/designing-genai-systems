@@ -7,7 +7,7 @@ In classic systems you can reason about correctness: the cache returns what was 
 queue delivers at least once. A model does not let you do that. It will be right on most inputs,
 wrong on some, and you will not know which until you check. So evaluation is not a phase at the end
 of the project. It is a component of the architecture, built before version 1, and every "where it
-breaks" section in this book starts with its output.
+breaks" section in this book names the evaluation metric that would show the failure.
 
 ## Three layers of checks
 
@@ -18,7 +18,7 @@ breaks" section in this book starts with its output.
 | Judged | Qualities a rule cannot capture | A model call per example, or a person's time | Is the answer correct and fully supported by the sources? Is the tone right? |
 
 Use them in that order. A deterministic check that catches 10% of failures for free beats a model
-judge that catches the same 10% for money. Most teams under-use the first layer.
+judge that catches the same 10% for money.
 
 ## Component and end-to-end
 
@@ -63,21 +63,25 @@ production failures; a golden set that only grows is a regression suite.
 When a property needs judgement, a model can grade it. It works, if you treat the judge as a
 component that also needs evaluating.
 
-- **Prefer pairwise to absolute.** "Which of these two answers is better?" is more reliable than
-  "score this answer from 1 to 10".
-- **Known biases.** Judges prefer the first answer shown (randomise order), longer answers (tell
-  them length is not a criterion), and answers written by their own model family (use a judge
-  from a different family where it matters).
+- **Pairwise or absolute.** "Which of these two answers is better?" gives the judge a reference
+  point; "score this answer from 1 to 10" does not. Check which form agrees better with people on
+  your task, during calibration (below).
+- **Known biases.** Zheng and others (2023), studying model judges on MT-Bench and Chatbot Arena,
+  describe three: position bias towards the first answer shown (randomise order), verbosity bias
+  towards longer answers (tell the judge length is not a criterion), and self-enhancement bias
+  towards answers from the judge's own model family (use a judge from a different family where it
+  matters).
 - **Calibrate against people.** Have two people label 100 examples. Measure agreement between them
   and between each of them and the judge, using Cohen's kappa. If the judge agrees with people
-  about as well as people agree with each other (kappa of 0.6 or more is a reasonable bar), use it.
+  about as well as people agree with each other, use it. This book's bar, a judgement rather than
+  a standard, is a kappa of 0.6 or more.
   If not, fix the rubric before trusting any number it produces.
 - **Give it a rubric, not a vibe.** "Correct means every factual claim in the answer appears in
   the sources and none contradicts them" is gradeable. "Is this a good answer?" is not.
 
 Judging costs money. A 500-example run where each judgement reads 3,000 tokens and writes 200,
-on a workhorse model, is about 1.5M input and 100K output tokens: a few dollars per run. Cheap
-enough to run on every pull request that touches a prompt.
+on a workhorse model, is about 1.5M input and 100K output tokens: {{< var f.f4.judge_run >}} per run
+on Claude Sonnet 5.5. Cheap enough to run on every pull request that touches a prompt.
 
 ## Evaluation in the delivery pipeline
 
@@ -94,11 +98,11 @@ The golden set tells you about the cases you thought of. Production tells you ab
 
 | Signal | What it means | Caveat |
 |---|---|---|
-| Explicit feedback (thumbs) | Direct, but rare | Under 2% of users click; skewed towards the annoyed |
+| Explicit feedback (thumbs) | Direct, but rare | Self-selected: the users who click are not a random sample, so read it as a pointer to examples, not as a rate |
 | Task completion | Did the user do the thing after the answer? | Needs product instrumentation |
-| Escalation or handoff rate | How often the system gave up or the user asked for a person | The single best health metric for support systems |
-| Reformulation rate | User asked again in different words within a minute | Strong sign the first answer missed |
+| Escalation or handoff rate | How often the system gave up or the user asked for a person | This book's first choice of health metric for support systems |
+| Reformulation rate | User asked again in different words within a minute | A sign the first answer missed |
 | Refusal rate | System said "I don't know" | Too low is as worrying as too high |
 
 Sample production traffic into a review queue every week, label it, and add the failures to the
-golden set. This loop, more than any model upgrade, is what makes systems better over time.
+golden set. This loop is what keeps the golden set describing the traffic you actually have.
