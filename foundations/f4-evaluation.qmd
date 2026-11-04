@@ -82,9 +82,11 @@ enough to run on every pull request that touches a prompt.
 ## Evaluation in the delivery pipeline
 
 Treat prompts, model versions, retrieval settings and tool definitions as code. A change to any
-of them runs the evaluation in CI and fails the build if a score drops by more than the noise
-level for that set size. Report the count of examples evaluated with the score, and fail if the
-count is zero: an evaluation that examined nothing did not pass.
+of them runs the evaluation in CI on the same examples as the last release, and the gate is
+paired: count the examples that passed before and fail now, and fail the build if that count is
+above a threshold you set in advance. Comparing two overall scores against the noise level hides a
+change that fixes five examples and breaks five others. Report the count of examples evaluated
+with the result, and fail if the count is zero: an evaluation that examined nothing did not pass.
 
 ## Online signals
 

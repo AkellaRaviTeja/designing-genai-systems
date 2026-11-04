@@ -7,7 +7,7 @@ user -> slack: "@askwiki ..."
 
 app: Answer service {
   class: zone
-  bot: Slack event handler {class: [svc; new]}
+  bot: "Slack handler: ack,\ndedupe, placeholder" {class: [svc; new]}
   api: Retrieve and answer {class: svc}
   bot -> api
 }

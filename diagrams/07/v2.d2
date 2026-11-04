@@ -8,6 +8,8 @@ ingest: Ingestion, continuous {
   hash: Skip unchanged by content hash {class: [svc; new]}
   parse: Parse by heading {class: svc}
   emb: Embed changed chunks {class: model}
+  recon: Daily page-ID reconcile {class: [svc; new]}
+  wiki -> recon: list IDs {class: offline}
   wiki -> sync: every 15 min {class: offline}
   sync -> hash -> parse -> emb {class: offline}
 }
@@ -17,7 +19,7 @@ db: Postgres + pgvector {
   label: "Postgres + pgvector\nchunks, vectors, page metadata"
 }
 ingest.emb -> db {class: offline}
-ingest.sync -> db: delete removed pages {class: [offline; hot]}
+ingest.recon -> db: delete removed pages {class: [offline; hot]}
 
 user: Employee {class: actor}
 query: Query path {
@@ -29,4 +31,4 @@ query: Query path {
   api -> llm: question + 5 chunks + dates
 }
 user -> query.api: question
-query.api -> db: "top 5, live spaces only,\none chunk set per page" {class: hot}
+query.api -> db: "top 5, live spaces only,\none chunk per page" {class: hot}

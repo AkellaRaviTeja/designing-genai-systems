@@ -65,9 +65,11 @@ request (a timestamp, a user ID, a randomly ordered list) placed early in the pr
 cache for everything after it. Check the cache-read count the API returns; if it is zero on
 repeated requests, something early in the prompt is changing.
 
-Three details catch people. There is a minimum prefix length below which nothing is cached
-(512 tokens on the current Claude models, more on some older ones). Caches belong to one model,
-so routing a conversation between two models forfeits the cache on each switch. And the cache
+Three details catch people. There is a minimum prefix length below which nothing is cached, and
+a shorter prompt is processed uncached without an error. On Claude it is 512 tokens for the 5.5
+models, Opus 5, Fable and Mythos; 1,024 for Sonnet 5 and Opus 4.8; and up to 4,096 for older
+models such as Haiku 4.5 (Anthropic's prompt caching documentation, checked 2026-11-04). Caches
+belong to one model, so routing a conversation between two models forfeits the cache on each switch. And the cache
 lifetime counts from the start of the request, so slow, bursty traffic may need the longer
 lifetime option, which costs more to write.
 
@@ -131,8 +133,11 @@ the book, and the most often forgotten.
 
 Store final answers keyed by the request. An exact-match cache is safe and useful for repeated
 identical requests. A semantic cache matches requests by embedding similarity, so "how many
-leave days do I get" can hit an entry stored for "what is my annual leave allowance". Hit rates
-range from almost nothing for open-ended chat to 30% or more for narrow FAQ-style traffic. The
+leave days do I get" can hit an entry stored for "what is my annual leave allowance". The hit rate
+depends entirely on how repetitive the traffic is: expect almost nothing for open-ended chat and
+more for narrow FAQ-style traffic, but estimate it from your own logs before building one. Replay a
+month of questions in order and count those with an earlier question above your similarity
+threshold whose source documents have not changed since; that count is the hit rate. The
 risk is serving a cached answer to a question that only looked similar, or serving an answer whose
 source has changed. Key entries by the source documents they used and invalidate on change, set a
 strict similarity threshold, and never semantically cache anything personalised.
