@@ -2,6 +2,6 @@
 | :-- | --: | --: | --: |
 | Telephony (inbound local + media stream) | $0.013 | $0.013 | $0.013 |
 | Speech to text (streamed for the whole call) | $0.0077 | $0.0077 | $0.0077 |
-| Model | $0.019 | $0.0067 | $0.00037 |
-| Text to speech | $0.018 | $0.013 | $0.0094 |
-| **Total per minute** | **$0.058** | **$0.04** | **$0.03** |
+| Model | $0.019 | $0.0049 | $0.00028 |
+| Text to speech | $0.024 | $0.018 | $0.013 |
+| **Total per minute** | **$0.064** | **$0.043** | **$0.034** |

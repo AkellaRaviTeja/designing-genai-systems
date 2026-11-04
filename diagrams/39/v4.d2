@@ -1,19 +1,19 @@
 ...@../_theme
 direction: down
-reg: "Model registry\nweights + tokenizer + template\n+ server version, one unit" {class: [store; new]}
+reg: "Model registry\nweights + tokenizer + template\n+ server version + config" {class: [store; new]}
 ci: "Eval gate\ngolden set per workload" {class: [svc; new]}
 reg -> ci: candidate
-gw: "Inference gateway\n95% stable, 5% canary" {class: svc}
+gw: "Inference gateway\nstable plus 5% canary" {class: svc}
 ci -> gw: promote to canary {class: hot}
-pool: Serving pool {
+pool: Serving pool, inside the boundary {
   class: zone
-  stable: Stable version {class: model}
-  canary: Canary version {class: [model; new]}
-  lora: "Adapters: extraction LoRA\nloaded per request" {class: [store; new]}
-  lora -> stable
+  stable: Stable release {class: model}
+  canary: "Canary release\non the spare GPU" {class: [model; new]}
+  judge: "Judge: stable release\nhigh reasoning effort" {class: [model; new]}
 }
 gw -> pool.stable
 gw -> pool.canary
-cmp: "Online comparison\nJSON validity, latency, judge" {class: [svc; new]}
+cmp: "Online comparison\nJSON validity, retries, judge" {class: [svc; new]}
 pool.canary -> cmp {class: async}
+cmp -> pool.judge: sampled pairs {class: async}
 cmp -> gw: promote or roll back {class: async}

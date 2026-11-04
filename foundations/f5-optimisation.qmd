@@ -13,37 +13,39 @@ O12 to O20 make each GPU produce more tokens, and apply only when you self-host.
 ## Measure first
 
 Before optimising, attribute cost. Tag every model call with the feature, the tenant and the step
-that made it, and log the token counts the API returns. Then sort. In most systems one or two
+that made it, and log the token counts the API returns. Then sort. Often one or two
 steps account for most of the bill, and the right optimisation is obvious once you see which.
-Without attribution, teams spend a sprint shortening a prompt that was 3% of the cost.
+Without attribution it is easy to spend a sprint shortening a prompt that turns out to be 3% of the
+cost.
 
 ## The catalogue
 
-| Code | Technique | Typical saving | Effort | Main risk |
+| Code | Technique | What it saves, and in proportion to what | Effort | Main risk |
 |---|---|---|---|---|
-| <span class="ocode">O1</span> | Prompt caching | 50% to 90% of input cost on repeated prefixes | Low | Silent cache misses |
-| <span class="ocode">O2</span> | Retrieval budget and reranking | 30% to 70% of input tokens in RAG | Medium | Lower recall |
+| <span class="ocode">O1</span> | Prompt caching | The cached prefix bills at the cache-read price (2.5% to 10% of input, by model) instead of the input price | Low | Silent cache misses |
+| <span class="ocode">O2</span> | Retrieval budget and reranking | Input tokens, in proportion to the passages you stop sending | Medium | Lower recall |
 | <span class="ocode">O3</span> | History compaction | Turns quadratic growth into linear | Medium | Lost context |
-| <span class="ocode">O4</span> | Output control | 20% to 60% of output tokens and latency | Low | Answers too terse |
-| <span class="ocode">O5</span> | Tool definition trimming and tool search | Thousands of tokens per call in agents | Low | The right tool is not found |
-| <span class="ocode">O6</span> | Compact formats | 20% to 40% on structured context | Low | Model misreads the format |
-| <span class="ocode">O7</span> | Batch APIs | 50% on anything not interactive | Low | Hours of latency |
-| <span class="ocode">O8</span> | Response and semantic caching | 100% on each hit; hit rates vary widely | Medium | Wrong answer served from cache |
-| <span class="ocode">O9</span> | Routing and cascades | 40% to 80% of model cost | Medium | Hard requests routed to weak models |
-| <span class="ocode">O10</span> | Distillation and fine-tuning a small model | 80% to 95% on a narrow task | High | Quality drift, maintenance |
-| <span class="ocode">O11</span> | Reasoning effort control | 30% to 80% of output on easy routes | Low | Hard requests under-thought |
-| <span class="ocode">O12</span> | Continuous batching | 5x to 20x throughput versus naive serving | Low (built into servers) | None worth naming |
-| <span class="ocode">O13</span> | Quantisation | Half or a quarter of the GPU memory | Low to medium | Task-specific quality loss |
-| <span class="ocode">O14</span> | Prefix caching on your own servers | Most of the prefill on shared prefixes | Low | Memory pressure |
-| <span class="ocode">O15</span> | Speculative decoding | 1.5x to 3x decode speed at low batch | Medium | Little gain at high batch |
+| <span class="ocode">O4</span> | Output control | Output tokens and decode time, in proportion | Low | Answers too terse |
+| <span class="ocode">O5</span> | Tool definition trimming and tool search | The tokens of every definition removed, on every call | Low | The right tool is not found |
+| <span class="ocode">O6</span> | Compact formats | Tokens on structured context; count them on your own data | Low | Model misreads the format |
+| <span class="ocode">O7</span> | Batch APIs | 50% of model cost on anything not interactive, at current list prices | Low | Hours of latency |
+| <span class="ocode">O8</span> | Response and semantic caching | The whole call on each hit; the hit rate comes from your logs | Medium | Wrong answer served from cache |
+| <span class="ocode">O9</span> | Routing and cascades | The price gap between tiers, on the share routed down | Medium | Hard requests routed to weak models |
+| <span class="ocode">O10</span> | Distillation and fine-tuning a small model | The price gap between large and small, minus training and serving | High | Quality drift, maintenance |
+| <span class="ocode">O11</span> | Reasoning effort control | Thinking tokens on routes that do not need them | Low | Hard requests under-thought |
+| <span class="ocode">O12</span> | Continuous batching | One read of the weights shared by every sequence in the batch | Low (built into servers) | None worth naming |
+| <span class="ocode">O13</span> | Quantisation | Half or a quarter of the weight memory | Low to medium | Task-specific quality loss |
+| <span class="ocode">O14</span> | Prefix caching on your own servers | Prefill on shared prefixes | Low | Memory pressure |
+| <span class="ocode">O15</span> | Speculative decoding | Decode steps, in proportion to accepted draft tokens | Medium | Gain depends on acceptance rate |
 | <span class="ocode">O16</span> | KV cache management | More concurrent sequences per GPU | Low | Preemption under load |
-| <span class="ocode">O17</span> | Choosing the parallelism | Large differences in cost per token | Medium | Wrong choice for the traffic |
-| <span class="ocode">O18</span> | Chunked prefill and disaggregation | Stable latency under mixed load | Medium to high | Operational complexity |
+| <span class="ocode">O17</span> | Choosing the parallelism | Communication overhead per token | Medium | Wrong choice for the traffic |
+| <span class="ocode">O18</span> | Chunked prefill and disaggregation | Stable inter-token latency under mixed load | Medium to high | Operational complexity |
 | <span class="ocode">O19</span> | Autoscaling, spot and scale to zero | Pay for the average, not the peak | Medium | Cold starts of minutes |
-| <span class="ocode">O20</span> | Right-sizing the hardware | 2x to 4x on small models | Low | Running out of headroom |
+| <span class="ocode">O20</span> | Right-sizing the hardware | The price gap between GPUs, if the smaller one meets the latency target | Low | Running out of headroom |
 
-The savings are rules of thumb from the mechanism, not promises. Each system chapter computes the
-real figure for its own numbers.
+None of these is a measured saving. The column says what each technique removes and what the saving
+is proportional to; each system chapter computes the figure for its own numbers, and the size of
+anything that depends on quality or hit rates is something to measure.
 
 ## Token optimisation: O1 to O11
 
@@ -65,21 +67,24 @@ request (a timestamp, a user ID, a randomly ordered list) placed early in the pr
 cache for everything after it. Check the cache-read count the API returns; if it is zero on
 repeated requests, something early in the prompt is changing.
 
-Three details catch people. There is a minimum prefix length below which nothing is cached
-(512 tokens on the current Claude models, more on some older ones). Caches belong to one model,
-so routing a conversation between two models forfeits the cache on each switch. And the cache
+Three details catch people. There is a minimum prefix length below which nothing is cached, and
+a shorter prompt is processed uncached without an error. On Claude it is 512 tokens for the 5.5
+models, Opus 5, Fable and Mythos; 1,024 for Sonnet 5 and Opus 4.8; and up to 4,096 for older
+models such as Haiku 4.5 (Anthropic's prompt caching documentation, checked 2026-11-04). Caches
+belong to one model, so routing a conversation between two models forfeits the cache on each switch. And the cache
 lifetime counts from the start of the request, so slow, bursty traffic may need the longer
 lifetime option, which costs more to write.
 
 ### O2 Retrieval budget and reranking {#o2}
 
 In retrieval systems, the retrieved passages are usually most of the input. Retrieving twenty
-passages to be safe and sending all of them costs four times as much as sending five, and often
-makes answers worse because the model has more irrelevant text to ignore. Retrieve wide (20 to 50
-candidates), rerank with a cross-encoder, and send the top 3 to 8. Reranking costs a fraction of
-a cent per query and usually pays for itself in generation tokens alone when the generator is a
-mid-tier or larger model. With the cheapest models it can cost more than the tokens it saves, and
-has to earn its place on quality instead ([System 8](../systems/08-production-rag.qmd)).
+passages to be safe and sending all of them costs four times as much as sending five, and gives
+the model fifteen more passages to ignore, which can make answers worse; measure answers, not just
+recall. Retrieve wide (20 to 50 candidates), rerank with a cross-encoder, and send the top 3 to 8.
+Rerankers are priced per token, so whether reranking pays for itself in generation tokens depends on
+the generator's price: with a mid-tier or larger model the passages it removes cost more than the
+reranking, and with the cheapest models they can cost less, so reranking has to earn its place on
+quality instead ([System 8](../systems/08-production-rag.qmd) works through both).
 
 ### O3 History compaction {#o3}
 
@@ -98,7 +103,8 @@ the history passes a threshold.
 
 ### O4 Output control {#o4}
 
-Output tokens cost four to eight times as much as input tokens and determine latency. Ask for the
+Output tokens cost {{< var f.ratio.out_in_low >}} to {{< var f.ratio.out_in_high >}} times as
+much as input tokens on the current models and determine decode time. Ask for the
 format you need and no more: a JSON object instead of prose, bullet points instead of paragraphs,
 "answer in at most three sentences". Use structured output modes where the API offers them, both
 to save tokens and to remove retry loops caused by malformed output. Set `max_tokens` to a hard
@@ -118,12 +124,12 @@ The same table costs 20% to 40% fewer tokens as CSV or a Markdown table than as 
 repeated keys. Replace long URLs and UUIDs with short local references and map them back after
 the call. Strip boilerplate (navigation, footers, signatures) from documents before they reach
 the prompt. Check on the golden set that the model reads the compact form as well as the verbose
-one; it usually does.
+one.
 
 ### O7 Batch APIs {#o7}
 
-Every major provider runs submitted jobs asynchronously at half price, usually within 24 hours
-and often much sooner. Anything not waiting on a person belongs here: nightly summaries,
+The major providers in the price table run submitted jobs asynchronously at half price, within a
+completion window of up to 24 hours. Anything not waiting on a person belongs here: nightly summaries,
 backfills, evaluations, post-call analytics, catalogue generation. It is the cheapest saving in
 the book, and the most often forgotten.
 
@@ -131,8 +137,11 @@ the book, and the most often forgotten.
 
 Store final answers keyed by the request. An exact-match cache is safe and useful for repeated
 identical requests. A semantic cache matches requests by embedding similarity, so "how many
-leave days do I get" can hit an entry stored for "what is my annual leave allowance". Hit rates
-range from almost nothing for open-ended chat to 30% or more for narrow FAQ-style traffic. The
+leave days do I get" can hit an entry stored for "what is my annual leave allowance". The hit rate
+depends entirely on how repetitive the traffic is: expect almost nothing for open-ended chat and
+more for narrow FAQ-style traffic, but estimate it from your own logs before building one. Replay a
+month of questions in order and count those with an earlier question above your similarity
+threshold whose source documents have not changed since; that count is the hit rate. The
 risk is serving a cached answer to a question that only looked similar, or serving an answer whose
 source has changed. Key entries by the source documents they used and invalidate on change, set a
 strict similarity threshold, and never semantically cache anything personalised.
@@ -142,21 +151,23 @@ strict similarity threshold, and never semantically cache anything personalised.
 Send each request to the cheapest model that handles it. A **router** decides up front, using
 rules or a small classifier. A **cascade** tries the cheap model first and escalates when a check
 fails (low confidence, failed validation). Both save the most when traffic is skewed towards easy
-requests, which it usually is. Measure the simpler option first: one model with per-route effort
-(<span class="ocode">O11</span>) often matches a router at lower complexity and keeps one cache.
+requests; count the share in your own logs. Measure the simpler option first: one model with
+per-route effort (<span class="ocode">O11</span>) may match a router at lower complexity, and it
+keeps one cache.
 
 ### O10 Distillation and fine-tuning a small model {#o10}
 
 For a narrow, high-volume task (classify this ticket, extract these ten fields) a small model
-fine-tuned on outputs from a large one can match the large model at a few percent of the cost.
-The large model labels a few thousand examples; the small one learns them. It is the largest single
-saving available and the most work: you now own a training pipeline, an evaluation gate and a
+fine-tuned on outputs from a large one may match the large model on that task. The price gap
+between the two is the ceiling on the saving, and the golden set decides whether you get it. The
+large model labels a few thousand examples; the small one learns them. It is potentially the
+largest single saving and the most work: you now own a training pipeline, an evaluation gate and a
 model that drifts as your data does.
 
 ### O11 Reasoning effort control {#o11}
 
 Thinking tokens are billed as output. Setting effort low on routes that do not need deep
-reasoning (chat, extraction, formatting) cuts output tokens substantially, and setting it high only
+reasoning (chat, extraction, formatting) cuts the thinking tokens on those routes, and setting it high only
 where evaluations show it helps keeps quality where it matters. Tune it per route, measured on the
 golden set, and judge the result by cost per completed task: a cheaper call that needs a retry is
 not cheaper.
@@ -177,8 +188,8 @@ throughput.
 
 ### O13 Quantisation {#o13}
 
-Store weights in fewer bits. FP8 halves memory relative to 16-bit with very small quality loss on
-most tasks, and current GPUs compute in FP8 natively. 4-bit formats (AWQ, GPTQ, and the MX formats)
+Store weights in fewer bits. FP8 halves weight memory relative to 16-bit, and Hopper and later
+GPUs compute in FP8 natively. The quality loss is model- and task-specific. 4-bit formats (AWQ, GPTQ, and the MX formats)
 quarter memory and fit large models on fewer GPUs, with more risk. Less memory for weights means
 more for the KV cache, so quantisation raises throughput as well as cutting the GPU count. Always
 re-run your own evaluation after quantising; losses concentrate in specific skills (arithmetic,
@@ -195,9 +206,11 @@ document, most of the prefill disappears. Route requests that share a prefix to 
 
 A cheap draft (a small model, extra prediction heads, or n-gram lookup from the prompt) proposes
 several tokens, and the large model verifies them in one forward pass. Accepted tokens are free
-decode steps. It helps most when the GPU is underused (small batches, latency-critical streams)
-and when output is predictable (code edits, extraction that copies from the input). At large batch
-sizes the GPU is already busy and the gain shrinks.
+decode steps. The gain depends on two things: the share of drafted tokens the large model
+accepts, which is higher when output is predictable (code edits, extraction that copies from the
+input), and how much the extra verified tokens add to each step's cost.
+[System 39](../systems/39-self-hosted-inference.qmd) works out the acceptance rate needed to break
+even.
 
 ### O16 KV cache management {#o16}
 
@@ -211,8 +224,9 @@ requests wait or running ones are preempted and recomputed.
 
 A model that does not fit on one GPU is split across several with tensor parallelism. Splitting
 further than needed adds communication and lowers throughput per GPU. For a given number of GPUs,
-compare few large replicas against many small ones: more replicas usually give more total
-throughput, and fewer, wider replicas give lower latency per stream. Mixture-of-experts models add
+compare few large replicas against many small ones: more replicas avoid communication overhead,
+and wider replicas split each step across more GPUs. Which wins on total throughput and on latency
+per stream depends on the model and the traffic, so measure both. Mixture-of-experts models add
 expert parallelism, and their decode cost follows the active parameters, not the total.
 
 ### O18 Chunked prefill and disaggregation {#o18}
@@ -221,7 +235,7 @@ A long prompt's prefill can occupy the GPU for hundreds of milliseconds and stal
 is decoding. Chunked prefill splits it and interleaves it with decode steps, which keeps
 inter-token latency stable. At larger scale, disaggregated serving runs prefill and decode on
 separate GPU pools and moves the KV cache between them, so each pool can be sized and tuned for
-its own bottleneck. It earns its complexity only at many nodes.
+its own bottleneck. In this book's judgement it earns its complexity only at many nodes.
 
 ### O19 Autoscaling, spot and scale to zero {#o19}
 
@@ -232,8 +246,10 @@ with little traffic should scale to zero or move to an API.
 
 ### O20 Right-sizing the hardware {#o20}
 
-An 8B model does not need an H100. On a single L4 or L40S it often costs a quarter as much per token
-at the latency most products need. Match the GPU to the model size and the latency target, and
+An 8B model may not need an H100. One H100 on AWS costs {{< var f.f5.h100_gpu_hour >}} a GPU-hour
+inside a p5.48xlarge, against {{< var f.f5.l4_hour >}} for one L4 (g6.xlarge), a factor of
+{{< var f.f5.h100_l4_ratio >}}. Whether the smaller GPU meets your latency target is a load test;
+if it does, that price gap is the saving. Match the GPU to the model size and the latency target, and
 check the price per GPU-hour across providers: the same H100 costs very different amounts on
 different clouds (see [Prices](../appendix/prices.qmd)).
 

@@ -11,20 +11,22 @@ ingest: Ingestion, every 15 min {
   sync: Sync changed pages {class: svc}
   parse: Parse by heading + header {class: svc}
   emb: Embed {class: model}
+  recon: Daily reconcile {class: svc}
   sync -> parse -> emb {class: offline}
 }
 conf -> ingest.sync {class: offline}
 
 db: "Postgres + pgvector\nchunks, vectors, metadata" {class: store}
 ingest.emb -> db {class: offline}
-ingest.sync -> db: deletes {class: offline}
+conf -> ingest.recon {class: offline}
+ingest.recon -> db: deletes {class: offline}
 
 app: Answer service {
   class: zone
-  bot: Slack handler {class: svc}
+  bot: Slack handler, ack {class: svc}
   ret: Retrieve, filter, dedupe {class: svc}
   gen: Grounded answer {class: model}
-  chk: Citation check {class: svc}
+  chk: Citation + grounding check {class: svc}
   bot -> ret -> gen -> chk
 }
 slack -> app.bot

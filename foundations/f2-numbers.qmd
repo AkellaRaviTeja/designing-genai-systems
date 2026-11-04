@@ -21,7 +21,7 @@ A token is the unit models read, write and bill. It is not a word and not a char
 | An image (Claude) | About width x height / 750 tokens, so about 1,600 for a 1092 x 1092 image | Images are cut into patches; each patch costs tokens |
 
 The Indic row matters more than any other in this table if you build for Indian users. A support
-bot answering in Hindi can cost two or three times what the English version costs, with no change
+bot answering in Hindi can cost two to four times what the English version costs, with no change
 in design. Tokenisers differ between vendors and generations, so measure: every major API has a
 token-counting endpoint. Never compare vendors on price per token alone; compare them on price per
 task, using the same inputs.
@@ -32,9 +32,10 @@ $$
 \text{cost} = \frac{T_{in} \cdot p_{in} + T_{out} \cdot p_{out} + T_{cached} \cdot p_{read}}{10^6}
 $$
 
-where $T$ are token counts and $p$ are prices per million tokens. Output tokens cost four to eight
-times as much as input tokens on current APIs, and exactly five times on the current Claude and
-GPT models. This one ratio drives a lot of design: a
+where $T$ are token counts and $p$ are prices per million tokens. Across the current models in
+the price table, output tokens cost {{< var f.ratio.out_in_low >}} to
+{{< var f.ratio.out_in_high >}} times as much as input tokens. This one ratio drives a lot of
+design: at five times, a
 system that reads 2,000 tokens and writes 400 spends as much on the 400 as on the 2,000.
 
 ::: {.numbers}
@@ -64,17 +65,19 @@ $$
 t = t_{\text{queue}} + t_{\text{prefill}} + \frac{T_{out}}{\text{decode speed}}
 $$
 
-Time to first token (queue plus prefill) is typically 300 ms to 1.5 s for hosted APIs, longer for
-very long prompts and for reasoning models that think first. Decode speed is typically 40 to 150
-tokens per second per stream. So output length dominates: 300 output tokens at 80 tokens per second
-is 3.75 seconds, whatever you do about the network.
+Providers do not guarantee either term, so this book plans with two assumptions and every chapter
+labels them as such: time to first token (queue plus prefill) of 300 ms to 1.5 s for hosted APIs,
+longer for very long prompts and for reasoning models that think first, and decode speed of 40 to
+150 tokens per second per stream. Replace both with your own traces as soon as you have them. Even
+at the fast end, output length dominates: 300 output tokens at 80 tokens per second is 3.75
+seconds, whatever you do about the network.
 
 Three consequences show up in every chapter:
 
 1. **Stream** anything a person reads. Streaming does not make the call faster, but the reader
    starts at the time to first token instead of the time to last token.
-2. **Shorten outputs** before you shop for a faster model. Asking for a terse format often halves
-   latency and output cost at the same time.
+2. **Shorten outputs** before you shop for a faster model. Decode time and output cost are both
+   proportional to output tokens, so half the tokens is half of both.
 3. **Parallelise independent calls.** Three sequential calls of 2 seconds each is 6 seconds; in
    parallel it is 2.
 
@@ -124,8 +127,11 @@ one read of the weights serves every sequence in the batch, so 64 sequences cost
 step than one.
 
 **Prefill is compute-bound.** Processing the prompt costs about $2 \times \text{parameters}$
-floating-point operations per token. At a realistic 40% of the H100's FP8 peak, a 70B model
-prefills about {{< var f.f2.prefill_tok_s >}} tokens per second per GPU.
+floating-point operations per token. At the H100's datasheet FP8 peak of
+{{< var f.f2.h100_fp8 >}} TFLOPS, a 70B model cannot prefill more than about
+{{< var f.f2.prefill_tok_s >}} tokens per second per GPU. Real servers reach some fraction of that
+ceiling, and the fraction depends on the server, the batch and the prompt lengths: measure it.
+[System 39](../systems/39-self-hosted-inference.qmd) shows how to decide without guessing it.
 
 ## Storage for retrieval
 
@@ -133,19 +139,19 @@ $$
 \text{index bytes} \approx \text{chunks} \times \text{dimensions} \times 4 \times 1.5
 $$
 
-Four bytes per float32 dimension, and about 1.5 times overhead for an HNSW graph index. A million
-chunks of 1,024 dimensions is about 6 GB. Most corpora are smaller than people expect: 40,000 wiki
-pages make about 180,000 chunks, under 2 GB with 1,536-dimension vectors. Storage is rarely the
-constraint. Re-embedding the corpus when you change embedding models is the cost to plan for.
+Four bytes per float32 dimension, and a rule of thumb of 1.5 times for an HNSW graph index's
+overhead (check your index's own size report). A million chunks of 1,024 dimensions is about 6 GB.
+A 40,000-page wiki at 1,600 tokens a page, in 400-token chunks, is 160,000 chunks: 160,000 x 1,536
+x 4 x 1.5 is about 1.5 GB. At these sizes storage is not the constraint. Re-embedding the corpus when you change embedding models is the cost to plan for.
 
 ## Constants worth memorising
 
 | Quantity | Value |
 |---|---|
 | Words per English token | about 0.75 |
-| Output price / input price | 4x to 8x; 5x on current Claude and GPT models |
-| Hosted time to first token | 300 ms to 1.5 s |
-| Hosted decode speed | 40 to 150 tokens/s per stream |
+| Output price / input price | {{< var f.ratio.out_in_low >}}x to {{< var f.ratio.out_in_high >}}x across the current models |
+| Hosted time to first token | 300 ms to 1.5 s (planning assumption) |
+| Hosted decode speed | 40 to 150 tokens/s per stream (planning assumption) |
 | Frontier / small model price ratio | about {{< var f.ratio.frontier_small >}}x |
 | Batch API discount | 50% |
 | Prompt cache read | 2.5% to 10% of the input price, depending on the model |

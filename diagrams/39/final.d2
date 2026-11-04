@@ -12,29 +12,33 @@ clients: Callers {
 gw: Inference gateway {
   class: zone
   auth: Keys, quotas, metering {class: svc}
-  route: "Priority + prefix-aware\nrouting, canary split" {class: svc}
+  route: "Tenant, priority and\nsession routing, canary" {class: svc}
   auth -> route
 }
 clients.app -> gw.auth
 clients.w -> gw.auth
 
-cluster: EKS, GPU node group {
+cluster: "EKS, p5.4xlarge GPU nodes, two AZs" {
   class: zone
-  pool: "vLLM replicas, 1 per H100\ngpt-oss-120b + LoRA adapters" {class: model}
-  nvme: Local NVMe weight cache {class: store}
-  nvme -> pool {class: offline}
+  ia: "Interactive replicas\n+1 spare, EAGLE3" {class: model}
+  ba: "Batch replicas\nFP8 KV" {class: model}
+  nvme: Instance NVMe weight copy {class: store}
+  nvme -> ia {class: offline}
 }
-gw.route -> cluster.pool {class: hot}
-fb: Bedrock fallback {class: ext}
-gw.route -> fb: overflow, outage {class: async}
+gw.route -> cluster.ia: restricted {class: hot}
+gw.route -> cluster.ba: restricted batch
+egress: "Egress proxy\nallow-list, no restricted IDs" {class: svc}
+api: "Hosted gpt-oss-120b API" {class: ext}
+gw.route -> egress: unrestricted
+egress -> api
 
 ops: Platform {
   class: zone
   reg: Model registry {class: store}
   ci: Eval gate + canary {class: svc}
-  mon: "Metrics: TTFT, queue,\nKV use, prefix hits" {class: store}
+  mon: "Metrics: TTFT, ITL,\nqueue, KV use, prefix hits" {class: store}
   reg -> ci
 }
 ops.ci -> gw.route {class: async}
-cluster.pool -> ops.mon {class: async}
+cluster.ia -> ops.mon {class: async}
 ops.mon -> clients.w: back-pressure {class: async}

@@ -9,7 +9,7 @@ bot: Orchestrator {
   class: zone
   conv: "Turn controller +\nstreaming STT, LLM, TTS" {class: svc}
   auth: "Identity state machine\nnot the model" {class: [svc; new]}
-  tools: "Tool gate\ntools appear only after auth" {class: [svc; new]}
+  tools: "Tool gate\nverified + confirmed" {class: [svc; new]}
   canned: Pre-rendered phrases {class: [store; new]}
   conv -> auth: name, DOB, member ID
   auth -> tools: verified {class: hot}

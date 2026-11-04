@@ -1,7 +1,9 @@
 | Quantity | Value | How |
 | :-- | --: | :-- |
-| KV cache per token | 72 KB | 2 x 36 layers x 8 KV heads x 64 dims x 2 bytes |
-| Prefill per H100 | 24K tokens/s | 25% of 989 TFLOPS / (2 x 5.1B active params) |
-| Decode per H100, batch 32 | 1,600 tokens/s | 32 streams, 3,000-token contexts, 70% of 3.35 TB/s |
-| Speed per interactive stream | 50 tokens/s | one token per decode step |
-| Decode per H100, batch 128 | 3,100 tokens/s | 128 streams, 4,000-token contexts |
+| Weights in memory | 65.2 GB | checkpoint size; Hopper keeps MXFP4 experts packed and multiplies in BF16 |
+| Read per decode step, dense part | 3.1 GB | attention, router and lm_head in BF16 |
+| Expert weights | 61 GB | 128 experts x 36 layers, 13.2 MB each |
+| Prefill ceiling per H100 | 88K tokens/s | 989 TFLOPS BF16 / 11.3 GFLOP per token at 7,000 tokens |
+| Decode ceiling, 32 streams of 3,000 | 2,400 tokens/s | 3.35 TB/s; 64% of experts touched per step |
+| Decode ceiling, 76 streams of 7,000 | 3,700 tokens/s | the batch an FP8 KV cache fits in 10 GB |
+| Decode ceiling, 38 streams, BF16 KV | 2,300 tokens/s | the batch a BF16 KV cache fits in 10 GB |

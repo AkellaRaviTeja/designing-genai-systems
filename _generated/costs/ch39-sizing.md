@@ -1,8 +1,9 @@
 |  | Today (1x) | Next year (3x) | At 10x |
 | :-- | --: | --: | --: |
-| Interactive GPUs busy at peak | 2.2 | 6.5 | 21.7 |
-| Interactive GPUs provisioned (60% target, minimum 2) | 4 | 11 | 37 |
-| Assistant GPU-hours a day | 9 | 26 | 87 |
-| Extraction GPU-hours a day | 19 | 58 | 192 |
-| 8x H100 nodes | 1 | 2 | 5 |
-| GPU time idle over a day | 85% | 78% | 71% |
+| Assistant streams at peak (40 tokens/s each) | 69 | 208 | 694 |
+| Interactive GPUs (32 streams each, plus 1 spare) | 4 | 8 | 23 |
+| Extraction GPU-hours a day at the ceiling | 8 | 25 | 83 |
+| Batch GPUs (assumed 50% of the ceiling, minimum 1) | 1 | 3 | 7 |
+| H100s in all | 5 | 11 | 30 |
+| Paid GPU time the work needs, at the ceiling | 11% | 15% | 18% |
+| Paid GPU time the work needs, at 50% (assumed) | 22% | 30% | 37% |

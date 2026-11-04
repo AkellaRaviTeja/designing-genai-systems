@@ -9,10 +9,10 @@ tts: TTS {class: ext}
 caller -> stt: "...can I move it to Thursday?"
 stt -> ctl: partial transcripts while speaking
 ctl -> llm: "speculative start on likely end of turn"
-caller -> ctl: "silence + turn model: done (250 ms)"
-stt -> ctl: final transcript (+150 ms)
-llm -> ctl: "first tokens (TTFT 300 to 600 ms)"
+caller -> ctl: "turn model: done after 250 ms silence"
+stt -> ctl: "final transcript, overlapped"
+llm -> ctl: "first tokens (TTFT)"
 ctl -> tts: "first sentence: Let me check Thursday."
-tts -> caller: "first audio (+100 to 200 ms)"
+tts -> caller: "first audio"
 llm -> ctl: tool call find_slots
-ctl -> tts: "filler: One moment."
+ctl -> caller: "pre-rendered filler: One moment."

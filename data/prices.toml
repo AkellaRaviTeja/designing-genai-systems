@@ -505,11 +505,12 @@ notes = "On-demand, Single-AZ unless marked. Read from AWS's own price feed (pub
 
 [voice.stt.deepgram.nova-3-streaming]
 price = 0.0077
+price_multilingual = 0.0092
 unit = "USD per audio minute, pay-as-you-go"
 source = "https://deepgram.com/pricing"
-checked = "2026-11-03"
+checked = "2026-11-04"
 verified = true
-notes = "Nova-3 monolingual. Multilingual streaming is $0.0092/min. Pre-recorded: $0.0043 mono, $0.0052 multi. No Nova-4 listed. Flux STT (turn-taking model) streaming: $0.0077 English, $0.0078 multilingual."
+notes = "Nova-3 monolingual; price_multilingual is Nova-3 Multilingual streaming. Pay-as-you-go allows 150 concurrent streaming STT connections, Growth 225 (pricing page, 2026-11-04). The page says BAAs are signed for Enterprise customers only. Multilingual streaming is $0.0092/min. Pre-recorded: $0.0043 mono, $0.0052 multi. No Nova-4 listed. Flux STT (turn-taking model) streaming: $0.0077 English, $0.0078 multilingual."
 
 [voice.stt.assemblyai.universal-streaming]
 price = 0.15
@@ -600,7 +601,25 @@ source = "https://aws.amazon.com/ec2/pricing/on-demand/"
 savings_plan_source = "https://pricing.us-east-1.amazonaws.com/savingsPlan/v1.0/aws/AWSComputeSavingsPlan/20261029175641/us-east-1/index.json"
 checked = "2026-11-03"
 verified = true
-notes = "A 1-yr EC2 Instance Savings Plan with no upfront payment is 37% below on-demand. Savings-plan rates are effective hourly rates from the AWS Price List API. p5.4xlarge (1x H100) is $6.88/hr."
+notes = "A 1-yr EC2 Instance Savings Plan with no upfront payment is 37% below on-demand. Savings-plan rates are effective hourly rates from the AWS Price List API. The single-GPU size, p5.4xlarge, has its own entry."
+
+[gpu.aws.p5-4xlarge]
+gpus = 1
+gpu = "H100"
+hourly = 6.88
+per_gpu_hourly = 6.88
+ec2_instance_savings_plan_1yr_no_upfront = 4.3344
+compute_savings_plan_1yr_no_upfront = 5.418
+ec2_instance_savings_plan_3yr_no_upfront = 2.97216
+instance_storage = "1 x 3,840 GB NVMe SSD"
+region = "us-east-1"
+unit = "USD per instance-hour, Linux"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/US%20East%20(N.%20Virginia)/Linux/index.json"
+savings_plan_source = "https://pricing.us-east-1.amazonaws.com/savingsPlan/v1.0/aws/AWSComputeSavingsPlan/20261029175641/us-east-1/index.json"
+checked = "2026-11-04"
+verified = true
+notes = "One H100 (80 GB), 16 vCPU, 256 GiB, 100 Gbps EFA, 10 Gbps EBS (https://aws.amazon.com/ec2/instance-types/p5/). Exactly one eighth of p5.48xlarge at every rate: on-demand $6.88 (rateCode K9VKFEBARNNMVRXV), EC2 Instance SP p5 1yr no upfront $4.3344, Compute SP 1yr no upfront $5.418. Capacity Blocks list p5.4xlarge in us-east-1. GPUDirect RDMA is not supported on this size."
 
 [gpu.aws.p5e-48xlarge]
 gpus = 8

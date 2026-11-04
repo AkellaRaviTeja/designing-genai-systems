@@ -256,10 +256,26 @@ def build(P, H):
     vars_["f2.decode_ceiling_70_fp8_tp2"] = (
         f"{2 * h100['bandwidth_tb_s'] * 1e12 / (m70['params_b'] * 1e9):.0f}"
     )
+    # Datasheet ceiling, no efficiency factor: real servers reach some fraction of it.
     vars_["f2.prefill_tok_s"] = num(
-        h100["fp8_tflops"] * 1e12 * 0.4 / (2 * m70["params_b"] * 1e9)
+        h100["fp8_tflops"] * 1e12 / (2 * m70["params_b"] * 1e9)
     )
+    vars_["f2.h100_fp8"] = f"{h100['fp8_tflops']:,}"
     p5 = P("gpu.aws.p5-48xlarge")
     vars_["f2.p5_month"] = usd(p5["hourly"] * HOURS_PER_MONTH)
     vars_["f2.p5_hour"] = usd_exact(p5["hourly"])
+
+    # Output to input price ratio across the current models, from the price table.
+    ratios = sorted(P(key)["output"] / P(key)["input"] for _, key, _ in CURRENT)
+    vars_["ratio.out_in_low"] = f"{ratios[0]:g}"
+    vars_["ratio.out_in_high"] = f"{ratios[-1]:.1f}".removesuffix(".0")
+
+    # F4: one judged run of 500 examples, 3,000 tokens in and 200 out, on Sonnet 5.5.
+    vars_["f4.judge_run"] = usd(500 * (3000 * son["input"] + 200 * son["output"]) / 1e6)
+
+    # F5 O20: one L4 against one H100 per GPU-hour.
+    l4 = P("gpu.aws.g6-xlarge")
+    vars_["f5.l4_hour"] = usd_exact(round(l4["hourly"], 2))
+    vars_["f5.h100_gpu_hour"] = usd_exact(round(p5["hourly"] / p5["gpus"], 2))
+    vars_["f5.h100_l4_ratio"] = f"{p5['hourly'] / p5['gpus'] / l4['hourly']:.1f}"
     return {"tables": tables, "vars": vars_}
