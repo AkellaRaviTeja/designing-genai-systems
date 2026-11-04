@@ -28,6 +28,9 @@ $toc-font-size: 0.8125rem;
 $sidebar-bg: $t-bg;
 $sidebar-fg: $t-text-muted;
 $sidebar-hl: $t-text;
+$navbar-bg: $t-bg;
+$navbar-fg: $t-text-muted;
+$navbar-hl: $t-text;
 $footer-bg: $t-bg;
 
 $grid-sidebar-width: 272px;
@@ -101,58 +104,206 @@ a {
 }
 a:hover { color: $t-link; text-decoration-color: $t-text; }
 
-// ---------------------------------------------------------------- Sidebar (the shell)
-#quarto-sidebar.sidebar {
+// ---------------------------------------------------------------- Header
+// One quiet bar: brand on the left, the three ways in beside it, search and tools on the right.
+// The current link carries a 2 px accent rule on the bar's bottom edge plus the text colour.
+#quarto-header {
   background: $t-bg;
-  border-right: 1px solid $t-border;
-  padding-top: 0.5rem;
+  border-bottom: 1px solid $t-border;
 }
-.sidebar-header { padding-bottom: 0.5rem; }
-.sidebar-title {
+#quarto-header .navbar {
+  background: $t-bg;
+  min-height: 60px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+#quarto-header .navbar-container { gap: 1rem; }
+// Quarto orders the bar's children itself; set the order outright.
+#quarto-header .navbar-brand-container { order: 1 !important; }
+#quarto-header .navbar-collapse { order: 2 !important; flex-grow: 1; }
+#quarto-header #quarto-search { order: 3 !important; flex: none; }
+#quarto-header #quarto-search,
+#quarto-header #quarto-search .aa-Autocomplete { width: auto !important; }
+#quarto-header .quarto-navbar-tools { order: 4 !important; margin-left: 0; }
+#quarto-header .navbar-toggler { order: 5 !important; }
+.navbar-brand-container { margin-left: 0 !important; margin-right: 0 !important; }
+.navbar-brand { padding: 0; margin-right: 0.5rem; }
+.navbar-title {
   font-family: $t-font-display;
-  font-size: 1.05rem;
+  font-size: 1.125rem;
   font-weight: 600;
   letter-spacing: $t-tracking-heading;
-  line-height: 1.15;
   color: $t-text;
-  a { text-decoration: none; color: $t-text; }
   .pixel { font-family: $t-font-pixel; font-weight: 400; letter-spacing: 0; }
 }
-.sidebar-tools-main a { color: $t-text-muted; }
-#quarto-search .aa-DetachedSearchButton, .sidebar-search .aa-DetachedSearchButton {
+#quarto-header .navbar-nav { gap: 0.25rem; }
+#quarto-header .navbar-nav .nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 60px;
+  padding: 0 0.6rem;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-family: $t-font-body;
+  font-size: $t-size-md;
+  font-weight: 500;
+  color: $t-text-muted;
+  transition: color 150ms cubic-bezier(0.2, 0, 0, 1);
+}
+#quarto-header .navbar-nav .nav-link:hover { color: $t-text; }
+#quarto-header .navbar-nav .nav-link.active {
+  color: $t-text;
+  border-bottom-color: $t-accent;
+}
+.quarto-navbar-tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  .quarto-navigation-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0 !important;
+    border-radius: $t-radius-control;
+    color: $t-text-muted;
+    font-size: 1.05rem;
+  }
+  .quarto-navigation-tool:hover { background: $t-chip; color: $t-text; }
+}
+// Search reads as a field with its shortcut, not a bare magnifier.
+#quarto-header .aa-DetachedSearchButton {
+  display: flex;
+  align-items: center;
+  width: 15rem;
+  height: 40px;
+  padding: 0 0.5rem 0 0.75rem;
+  gap: 0.5rem;
   background: $t-surface;
   border: 1px solid $t-border;
   border-radius: $t-radius-control;
-}
-.sidebar-navigation {
-  .sidebar-item-section > .sidebar-item-container .sidebar-item-text {
-    @include label;
-    font-size: 11px;
-  }
-  .sidebar-item-section { margin-top: 0.9rem; }
-  .sidebar-link {
-    font-family: $t-font-body;
+  color: $t-text-muted;
+  .aa-DetachedSearchButtonIcon { color: $t-text-muted; width: auto; }
+  .aa-DetachedSearchButtonIcon { flex: none; }
+  .aa-DetachedSearchButtonIcon svg { width: 16px; height: 16px; }
+  .aa-DetachedSearchButtonPlaceholder {
+    display: flex !important;
+    flex: 1;
+    align-items: center;
+    padding: 0;
     font-size: $t-size-sm;
     color: $t-text-muted;
-    border-radius: $t-radius-control;
-    padding: 5px 8px;
+  }
+  // Quarto leaves the placeholder empty.
+  .aa-DetachedSearchButtonPlaceholder::before { content: "Search the book"; }
+  .aa-DetachedSearchButtonPlaceholder::after {
+    content: "/";
+    margin-left: auto;
+    font-family: $t-font-mono;
+    font-size: $t-size-xs;
+    padding: 0 6px;
+    border: 1px solid $t-border;
+    border-radius: 4px;
+  }
+}
+#quarto-header .aa-DetachedSearchButton:hover { border-color: $t-border-strong; }
+
+// Phones and tablets: brand and tools on one row; the breadcrumb row stays to one line.
+@media (max-width: 991.98px) {
+  #quarto-header .navbar { min-height: 56px; }
+  #quarto-header .navbar-container { gap: 0.25rem; }
+  .navbar-title { font-size: 1rem; }
+  #quarto-header #quarto-search { margin-left: auto; }
+  #quarto-header .navbar-collapse { flex-basis: 100%; }
+  #quarto-header .aa-DetachedSearchButton {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+    .aa-DetachedSearchButtonPlaceholder { display: none !important; }
+  }
+  #quarto-header .navbar-container { flex-wrap: wrap; }
+  #quarto-header .navbar-toggler { border: none; padding: 0; width: 40px; height: 40px; margin: 0 !important; }
+  #quarto-header .navbar-brand { margin-right: 0; }
+  #quarto-header .aa-DetachedSearchButton .aa-DetachedSearchButtonIcon svg { width: 18px !important; height: 18px !important; }
+  #quarto-header .navbar-collapse { order: 6 !important; }
+  #quarto-header .navbar-nav .nav-link { min-height: 44px; margin-bottom: 0; border-bottom: none; border-left: 2px solid transparent; }
+  #quarto-header .navbar-nav .nav-link.active { border-left-color: $t-accent; }
+  #quarto-header .navbar-brand-container { min-width: 0; flex: 0 1 auto; }
+  .navbar-title { white-space: nowrap; }
+  #quarto-header .quarto-navbar-tools .quarto-navigation-tool { width: 36px; height: 40px; }
+  .quarto-secondary-nav {
+    background: $t-bg;
+    border-top: 1px solid $t-border;
+    .breadcrumb { flex-wrap: nowrap; min-width: 0; margin: 0; font-size: $t-size-sm; }
+    .breadcrumb-item { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .breadcrumb-item:first-child { flex: none; }
+    .quarto-page-breadcrumbs { min-width: 0; }
+  }
+}
+
+// ---------------------------------------------------------------- Sidebar
+// The chapter list only. Parts are plain small caps; chapters hang off one guide line per part;
+// the current chapter gets an accent bar on that line and the text colour.
+#quarto-sidebar.sidebar {
+  background: $t-bg;
+  border-right: 1px solid $t-border;
+  padding-top: 1.25rem;
+  scrollbar-width: thin;
+  scrollbar-color: $t-border transparent;
+}
+.sidebar-navigation {
+  .sidebar-item-section { margin-top: 1.25rem; }
+  .sidebar-item-section > .sidebar-item-container .sidebar-item-text {
+    font-family: $t-font-body;
+    font-size: $t-size-xs;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $t-text;
+    padding: 4px 8px;
+    background: none;
+  }
+  .sidebar-item-section > .sidebar-item-container .bi-chevron-right {
+    font-size: 0.7rem;
+    color: $t-text-muted;
+  }
+  .sidebar-section.depth1 {
+    margin: 4px 0 0 8px;
+    padding-left: 0;
+    border-left: 1px solid $t-border;
+  }
+  .sidebar-link {
+    font-family: $t-font-body;
+    font-size: 14px;
+    color: $t-text-muted;
+    padding: 6px 8px;
     line-height: 1.35;
     text-decoration: none;
-    transition: background-color 150ms cubic-bezier(0.2, 0, 0, 1), color 150ms;
+    transition: color 150ms cubic-bezier(0.2, 0, 0, 1);
   }
-  .sidebar-link:hover { background: $t-chip; color: $t-text; }
+  .sidebar-section .sidebar-link {
+    margin-left: -1px;
+    padding-left: 12px;
+    border-left: 2px solid transparent;
+    border-radius: 0;
+  }
+  .sidebar-link:hover { color: $t-text; }
   .sidebar-link.active {
-    background: $t-surface;
     color: $t-text;
-    box-shadow: $t-shadow-1;
     font-weight: 500;
+    background: none;
+    box-shadow: none;
   }
+  .sidebar-section .sidebar-link.active { border-left-color: $t-accent; }
+  // A wrapped title hangs under its own text, not under the number.
+  .sidebar-link .chapter-title { display: flex; align-items: baseline; }
   .sidebar-link .num {
+    flex: none;
     font-family: $t-font-pixel;
     font-size: 11px;
     color: $t-text-muted;
-    display: inline-block;
-    min-width: 2.2em;
+    min-width: 2.6em;
   }
   .sidebar-link.active .num { color: $t-accent; }
 }
@@ -584,6 +735,11 @@ body.landing {
   main.content table td:first-child, main.content table th:first-child { min-width: 9rem; }
   .numbers { font-size: 0.74rem; padding-left: 1rem; padding-right: 1rem; }
   .hero { padding-top: 1.5rem; }
+}
+@media (max-width: 575.98px) {
+  // Room for brand, search, theme and menu on one row; the source link stays in the chapter rail.
+  #quarto-header .quarto-navbar-tools a.quarto-navigation-tool { display: none; }
+  .navbar-title { font-size: 0.95rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }

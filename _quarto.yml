@@ -15,8 +15,18 @@ book:
   repo-actions: [issue, source]
   search: true
   page-navigation: true
+  navbar:
+    title: "Designing GenAI Systems"
+    search: true
+    left:
+      - text: "Start reading"
+        href: foundations/f1-method.qmd
+      - text: "The fifty systems"
+        href: appendix/roadmap.qmd
+      - text: "Prices"
+        href: appendix/prices.qmd
   sidebar:
-    style: floating
+    style: docked
     collapse-level: 2
   page-footer:
     left: "Designing GenAI Systems by Ravi Teja. Text CC BY-NC-SA 4.0, code MIT."

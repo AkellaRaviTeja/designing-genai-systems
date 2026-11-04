@@ -21,7 +21,13 @@
   }
   document.querySelectorAll(".sidebar-link .chapter-title, .sidebar-link .menu-text, .nav-page .nav-page-text").forEach(function (e) { split(e, false); });
   split(document.querySelector(".quarto-title .title"), true);
-  var t = document.querySelector(".sidebar-title a");
+  // Quarto marks a header link current on pages it does not point to; keep it only on its own page.
+  document.querySelectorAll("#quarto-header .navbar-nav .nav-link").forEach(function (a) {
+    var here = a.pathname.replace(/index\.html$/, "") === location.pathname.replace(/index\.html$/, "");
+    a.classList.toggle("active", here);
+    if (here) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  var t = document.querySelector(".navbar-title, .sidebar-title a");
   if (t && /GenAI/.test(t.textContent) && !t.querySelector(".pixel")) {
     t.innerHTML = t.textContent.replace("GenAI", '<span class="pixel">GenAI</span>');
   }
