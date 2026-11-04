@@ -1,0 +1,36 @@
+...@../_theme
+direction: right
+
+ci: "Pull requests" {class: actor}
+experts: "Domain experts" {class: actor}
+owners: "Feature owners" {class: actor}
+
+plat: "Evaluation platform" {
+  class: zone
+  runner: "Eval runner" {class: svc}
+  gate: "Paired gate:\nper slice, Holm" {class: svc}
+  cal: "Judge calibration" {class: svc}
+  sampler: "Sampler and\nreview queue" {class: svc}
+  exp: "Experiment analysis" {class: svc}
+  suites: "Suites and labels" {class: store}
+  results: "Outputs, verdicts,\nflip rates" {class: store}
+  runner -> results
+  results -> gate
+  suites -> runner
+  cal -> gate: "corrections" {class: async}
+  sampler -> suites
+}
+
+gw: "Gateway (System 36):\naliases, ledger" {class: svc}
+models: "Features' models\nand pinned judge" {class: model}
+traces: "Feature traces" {class: store}
+
+ci -> plat.runner
+plat.runner -> gw
+gw -> models
+experts -> plat.cal: "labels"
+experts -> plat.sampler: "labels"
+traces -> plat.sampler {class: offline}
+gw -> plat.exp: "arm, cost" {class: offline}
+plat.gate -> ci: "verdict" {class: async}
+plat.exp -> owners: "decision" {class: async}

@@ -1,0 +1,22 @@
+...@../_theme
+direction: right
+
+ci: "Pull request\nor nightly job" {class: actor}
+experts: "Domain experts" {class: actor}
+runner: "Eval runner" {class: svc}
+gw: "Gateway,\noffline class" {class: svc}
+judge: "Judge, pinned\nversion" {class: [model; new]}
+tool: "Labelling tool" {class: [svc; new]}
+cal: "Calibration labels,\nstratified by verdict" {class: [store; new]}
+fit: "Sensitivity and\nspecificity per criterion" {class: [svc; new]}
+score: "Corrected score\nand interval" {class: [svc; new]}
+
+ci -> runner
+runner -> gw
+gw -> judge
+experts -> tool
+tool -> cal
+cal -> fit: "quarterly" {class: offline}
+judge -> fit: "same outputs" {class: offline}
+fit -> score
+runner -> score

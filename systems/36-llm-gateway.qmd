@@ -527,7 +527,8 @@ usage grouped by API key and model, typically within five minutes of a request);
 for Bedrock, where tags on an application inference profile carry cost allocation per feature; and
 OpenAI's usage and cost reporting by project (confirm which groupings your account exposes). A gap
 above 2% opens a ticket with its lines: unmetered calls, a price-table row out of date, a route
-missing from the join. Evaluation runs are a feature of their own (the CI class), so their cost is
+missing from the join. Evaluation runs are a feature of their own (the CI class, whose platform is
+[System 43](43-evaluation-platform.qmd)), so their cost is
 visible, not spread.
 
 ![Version 4: tags required, cost priced from usage per route, a ledger, and reconciliation against the invoices.](../images/36/v4.svg){fig-alt="Version 4. Features send requests carrying a feature and an opaque tenant. The gateway rejects untagged requests and prices each response from its usage fields and a dated price table for the provider that served it, writing to a usage ledger. A daily reconciliation compares the ledger with provider cost reports and AWS cost allocation tags and sends cost by feature, with the gap explained, to Finance and the teams."}

@@ -394,7 +394,7 @@ then the candidate count, each checked on the golden set.
 | Reranking | Cohere Rerank 5 Pro over 30 candidates, 500 ms deadline, fused-order fallback | Reads question and passage together, which neither retriever does; bounded latency |
 | Refusal | Threshold on the top rerank score, set on a separate calibration set, then System 7's citation check | Refuses before generation, calibrated on questions it is not scored on |
 | Generation | Claude Haiku 5.5, 6 chunks, numbered sources, streamed | The cheapest current model; the golden set must show it answers well from good passages before launch, otherwise Sonnet 5.5 |
-| Quality loop | Golden set of 400 in four slices, recall and answers per slice, paired gates in CI | An average would hide every failure in this chapter |
+| Quality loop | Golden set of 400 in four slices, recall and answers per slice, paired gates in CI | An average would hide every failure in this chapter; [System 43](43-evaluation-platform.qmd) sizes slices from what the gate can detect |
 
 A request from the agent console, end to end, with the same assumed stage times as ranges:
 

@@ -72,7 +72,7 @@ toc: false
     <span class="pk">PART VI</span>
     <h3>The model platform</h3>
     <ul><li>Gateways, caches and routers</li><li>Self-hosted inference, honestly priced</li><li>Fine-tuning, evals, guardrails</li></ul>
-    <div class="meta"><span class="chip"><b>11</b>&nbsp;SYSTEMS · 2 WRITTEN</span><span class="open">Open →</span></div>
+    <div class="meta"><span class="chip"><b>11</b>&nbsp;SYSTEMS · 3 WRITTEN</span><span class="open">Open →</span></div>
   </a>
   <a class="part-card p-capstones" href="appendix/roadmap.html#part-vii-capstones">
     <div class="cover"><img src="assets/covers/capstones.svg" alt=""></div>

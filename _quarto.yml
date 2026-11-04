@@ -60,6 +60,7 @@ book:
       chapters:
         - systems/36-llm-gateway.qmd
         - systems/39-self-hosted-inference.qmd
+        - systems/43-evaluation-platform.qmd
   appendices:
     - appendix/roadmap.qmd
     - appendix/prices.qmd

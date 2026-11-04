@@ -1,0 +1,23 @@
+...@../_theme
+direction: right
+
+users: "Drafts users" {class: actor}
+app: "Email drafts\nservice" {class: svc}
+gw: Gateway {
+  class: zone
+  split: "Alias split by\nhashed key" {class: [svc; new]}
+  ledger: "Usage ledger\nwith arm" {class: [store; new]}
+  split -> ledger {class: async}
+}
+son: "Sonnet 5.5" {class: model}
+hai: "Haiku 5.5" {class: [model; new]}
+events: "Outcome events:\ndraft sent" {class: [store; new]}
+exp: "Experiment analysis:\nfixed horizon, guardrails" {class: [svc; new]}
+
+users -> app
+app -> gw.split
+gw.split -> son: "control"
+gw.split -> hai: "treatment"
+app -> events {class: async}
+events -> exp {class: offline}
+gw.ledger -> exp: "cost, latency" {class: offline}

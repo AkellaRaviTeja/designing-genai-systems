@@ -77,7 +77,7 @@ cost constraints). Systems marked **written** are in this edition.
 | 40 | Fine-tuning pipeline | ★★★ | Fine-tune against prompt against RAG, data curation, serving many adapters |
 | 41 | Distilling a frontier model into a small one | ★★★ | Teacher labels, savings arithmetic, where quality falls off |
 | 42 | Preference tuning pipeline | ★★★★ | Preference data, reward hacking, evaluating the result |
-| 43 | Evaluation platform | ★★★ | Offline suites, judge calibration, CI gates, online experiments |
+| 43 | [Evaluation platform](../systems/43-evaluation-platform.qmd) **written** | ★★★ | Offline suites, judge calibration, CI gates, online experiments |
 | 44 | Guardrails service | ★★★ | Injection detection, redaction, output validation, the latency each adds |
 | 45 | LLMOps: tracing, prompt registry, cost dashboards | ★★ | Prompt versioning, trace sampling, unit economics per feature |
 | 46 | Synthetic data factory | ★★★ | Generate, filter, deduplicate, avoiding model collapse |
