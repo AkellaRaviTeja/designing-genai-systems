@@ -11,11 +11,12 @@ q -> w
 w -> gw: batch class
 node: "p5.48xlarge, 8x H100" {
   class: zone
-  ia: "Interactive replicas\nreserved" {class: model}
-  ba: "Batch replicas\nlend to interactive at peak" {class: model}
+  ia: "Interactive pool\npriority scheduling" {class: [model; new]}
+  ba: "Batch pool\nlarge batches" {class: [model; new]}
 }
 gw -> node.ia {class: hot}
 gw -> node.ba
+gw -> node.ia: batch, low priority {class: async}
 mon: "Metrics\nqueue depth, TTFT" {class: [store; new]}
 node -> mon {class: async}
 mon -> w: back-pressure {class: async}

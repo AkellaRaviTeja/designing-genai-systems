@@ -1,17 +1,17 @@
 ---
 title: "39 · Self-hosted inference platform"
-description: "Serving an open-weight model on your own GPUs for two workloads: sizing from first principles, isolation, utilisation, resilience, safe upgrades, and an honest break-even."
+description: "Serving an open-weight model on your own GPUs for two workloads: sizing from datasheet ceilings, isolation, right-sized hardware, resilience, safe upgrades, and a break-even you can check."
 ---
 
 ::: {.chapter-meta}
-[Level <span class="level">★★★★</span>]{} [Part VI, The model platform]{} [Uses <span class="ocode">O7</span> <span class="ocode">O12</span> to <span class="ocode">O19</span>]{}
+[Level <span class="level">★★★★</span>]{} [Part VI, The model platform]{} [Uses <span class="ocode">O7</span> <span class="ocode">O12</span> to <span class="ocode">O20</span>]{}
 :::
 
 "Should we host our own models?" usually arrives as a cost question, and the arithmetic usually
 gives an uncomfortable answer. This chapter designs a self-hosted inference platform properly:
-sizing GPUs from first principles, isolating workloads, keeping utilisation up, surviving failures
-and upgrading safely. It also prices every alternative next to it, because the most useful thing a
-design review can do with this request is find out whether it should be built at all.
+sizing GPUs from datasheet ceilings, isolating workloads, right-sizing the hardware, surviving
+failures and upgrading safely. It also prices every alternative next to it, because the most useful
+thing a design review can do with this request is find out how much of it should be built at all.
 
 ## The brief
 
@@ -24,63 +24,98 @@ services of our cloud. Processing has to run on infrastructure we operate. Can w
 on our own GPUs, and will it save money?
 :::
 
-Ledgerline is a worked scenario. The brief contains two reasons to self-host, and they are not
-equally strong. The contract terms are a hard requirement. The cost hope is a hypothesis to test.
+Ledgerline is a worked scenario: its traffic, its contracts and its team are inputs to the
+arithmetic, not observations. The brief contains two reasons to self-host, and they are not equally
+strong. The contract terms are a hard requirement. The cost hope is a hypothesis to test.
 
 ## Questions to ask
 
 | Question | Why it changes the design | We assume |
 |---|---|---|
-| What are the workloads, in tokens per day, input and output? | Prefill and decode use the GPU differently; their mix sizes everything | Extraction: 1.2B input, 60M output tokens a day. Assistant: 300M input, 40M output |
-| What latency does each need? | Interactive and batch work should not share a queue | Assistant: first token under 1 s at p95, at least 40 tokens/s per stream. Extraction: done within 6 hours |
+| What are the workloads, in tokens per day, input and output? | Prefill and decode use the GPU differently; their mix sizes everything | Extraction: 1.2B input, 60M output tokens a day, prompts of 4,000 to 10,000 tokens (we use the middle, 7,000, as the mean). Assistant: 300M input, 40M output, prompts of 3,000 tokens on average |
+| What latency does each need? | Interactive and batch work should not share a queue | Assistant: first token under 1 s at p95, at least 40 tokens/s per stream (a 25 ms gap between tokens). Extraction: done within 6 hours |
 | What is the traffic shape over a day? | Idle GPUs cost the same as busy ones | Assistant in 8 business hours with a peak hour at twice the average. Extraction arrives through the day but can wait |
-| Has an open model passed *our* evaluation? | Without this, nothing else matters | gpt-oss-120b meets the bar on both golden sets at medium reasoning effort; a LoRA adapter lifts extraction field accuracy further |
-| What exactly do the contracts allow? | Decides which options are even legal | Our AWS account, our VPC, our GPUs. No model provider APIs, including Bedrock, for those customers' documents. Other tenants may still use Bedrock |
+| Has an open model passed *our* evaluation? | Without this, nothing else matters | The chapter's premise: gpt-oss-120b at medium reasoning effort passes both golden sets. That is an assumption to replace with your own run of [F4](../foundations/f4-evaluation.qmd)'s method, not a result |
+| What exactly do the contracts allow? | Decides which options are even legal | Our AWS account, our VPC, our GPUs. No model provider APIs, including Bedrock, for those customers' documents. Other tenants may use any provider |
+| What share of tokens is restricted? | Only those tokens have to run on our GPUs | Assumed 40%: the two largest customers' extraction and assistant traffic |
 | Who will run it at 3 am? | GPU serving fails in new ways | A platform team of four, one of whom has run GPU clusters; on-call shared with the rest of infrastructure |
-| Can we get the GPUs? | H100 capacity is not always available on demand | One p5 node now; a second needs a capacity reservation |
+| Can we get the GPUs? | H100 capacity is not always available on demand | AWS lists H100s in us-east-1 as p5.48xlarge (8 GPUs) and p5.4xlarge (1 GPU). A list price is not capacity; growth needs a reservation |
 | How often will models change? | Upgrades are where self-hosted systems break | A new model or server version every two to three months |
 
 The fourth question saves more money than anything else in this chapter. Moving from a large
 proprietary model to a capable open model is a bigger change in cost than any choice about where
-the open model runs. That has to be on the table before anyone sizes a GPU.
+the open model runs. The sixth decides how much of the platform to build: only the restricted
+tokens have to stay inside the boundary.
 
 ## The numbers
 
-Start with what one H100 can do with this model. gpt-oss-120b is a mixture-of-experts model: 117B
-parameters in total, but only 5.1B are active for each token, and its 4-bit weights take 61 GB, so
-one replica fits on one GPU. That last fact simplifies everything: no tensor parallelism, one
-replica per GPU, and a node of eight GPUs is eight independent servers.
+Start with what one H100 holds. gpt-oss-120b is a mixture-of-experts model with 117B parameters,
+of which 5.1B are active for each token. Its expert weights ship in 4-bit MXFP4 and everything else
+in BF16; the checkpoint is {{< var ch39.weights_gb >}} GB ({{< var ch39.weights_gib >}} GiB), and the
+model card says it fits a single 80 GB GPU. That simplifies everything: no tensor parallelism, one
+replica per GPU, and every GPU is an independent server.
 
-![Memory on one H100. The KV cache gets what the weights leave.](../images/39/memory.svg){fig-alt="An 80 GB H100 bar split into model weights in MXFP4 at 61 GB, KV cache at about 12 GB, and runtime overhead at about 7 GB."}
+![Memory on one H100. The KV cache gets what the weights leave; its size is an assumption until the server reports it.](../images/39/memory.svg){fig-alt="An 80 GB H100 bar split into model weights at 65.2 GB, an assumed KV cache of about 10 GB, and runtime overhead of about 5 GB."}
+
+::: {.numbers}
+vLLM's gpt-oss recipe runs one H100 with `--gpu-memory-utilization 0.95` ({{< var ch39.mem_util >}}) to avoid running out of memory.
+80 GB x {{< var ch39.mem_util >}} = 76 GB, less {{< var ch39.weights_gb >}} GB of weights = {{< var ch39.mem_left_gb >}} GB for KV cache, activations and CUDA graphs.
+Assume {{< var ch39.kv_budget_gb >}} GB for the KV cache. vLLM reports the real figure when it starts; use that.
+:::
 
 {{< include ../_generated/costs/ch39-capacity.md >}}
 
-: Planning numbers for gpt-oss-120b on one H100, derived from the datasheet with stated efficiency factors. Replace them with a benchmark of your own traffic before buying hardware. {.striped}
+: Datasheet ceilings for gpt-oss-120b on one H100: 989 TFLOPS BF16 and 3.35 TB/s, with no efficiency factor. No server reaches them, so every conclusion below is stated as the share of these ceilings it needs. {.striped}
 
-The decode figures come from [F2](../foundations/f2-numbers.qmd)'s rule that decoding reads the
-weights once per step, adjusted for experts: each token uses 4 of 128 experts per layer, so a batch
-of 32 tokens touches about 64% of the expert weights, not all of them. That is why a batch of 32
-still gives each stream {{< var ch39.per_stream >}} tokens a second.
+The prefill ceiling uses the BF16 peak. The H100 datasheet lists no FP4 format (its smallest
+floating-point format is FP8), and vLLM's path that pairs MXFP4 weights with MXFP8 activations is listed for
+Blackwell only. On an H100 the 4-bit experts save memory, not arithmetic.
+
+The decode ceilings come from [F2](../foundations/f2-numbers.qmd)'s rule that a decode step reads
+the weights once, adjusted for experts. Each token picks 4 of 128 experts per layer, so with uniform
+routing a batch of 32 tokens touches 1 - (124/128)^32 = {{< var ch39.touched_32 >}} of them. A step
+reads the {{< var ch39.dense_read_gb >}} GB of dense weights, that share of the
+{{< var ch39.experts_gb >}} GB of experts, and every sequence's KV cache. Real routing is skewed and
+touches fewer experts, so this errs on the slow side.
 
 Now the memory check, which is where the batch workload runs into trouble:
 
 ::: {.numbers}
-Assistant:  32 streams x 3,000 tokens = 96K tokens x 72 KB = 7 GB of KV cache. Fits in ~12 GB.
-Extraction: 128 streams x 4,000 tokens = 512K tokens x 72 KB = 38 GB. Does not fit.
-  Half the layers use a 128-token sliding window, so only half store full context: 19 GB. Still no.
-  Store the KV cache in FP8 (O16): 9.4 GB. Fits.
+KV per token: 2 (K and V) x 8 KV heads x 64 dims x 2 bytes = 2 KB per layer, x 36 layers = {{< var ch39.kv_kb >}} KB in BF16.
+Half the layers (18) use a 128-token sliding window. If the server keeps only the window there, a token of context costs {{< var ch39.kv_hyb_kb >}} KB, and {{< var ch39.kv_fp8_kb >}} KB with an FP8 cache.
+Assistant, 32 streams x 3,000 tokens: {{< var ch39.mem.a_full_bf16 >}} GB at full width in BF16, {{< var ch39.mem.a_fp8 >}} GB with the window in FP8. Fits either way.
+Extraction, 128 streams x 7,000 tokens: {{< var ch39.mem.e_full_bf16_128 >}} GB at full width, {{< var ch39.mem.e_hyb_bf16_128 >}} GB with the window, {{< var ch39.mem.e_fp8_128 >}} GB with the window in FP8. None fits.
+Streams that fit in {{< var ch39.kv_budget_gb >}} GB at 7,000 tokens: {{< var ch39.eb_full >}} at full width, {{< var ch39.eb_bf16 >}} with the window, {{< var ch39.eb_fp8 >}} with the window in FP8 ({{< var ch39.eb_fp8_lo >}} at 10,000 tokens, {{< var ch39.eb_fp8_hi >}} at 4,000).
 :::
+
+The window saving depends on the server. vLLM's hybrid KV cache manager documents it for gpt-oss:
+sliding-window layers reserve slots only for the most recent window. Confirm that your version runs
+it with the options you enable; without it every layer stores the whole context and the batch
+halves. The FP8 cache is a quality change as well as a memory one, and it goes through the
+evaluation gate in version 4.
+
+The assistant needs a per-stream speed, which caps how many streams one GPU can carry:
+
+{{< include ../_generated/costs/ch39-streams.md >}}
+
+: Decode for the assistant at three batch sizes, 3,000-token contexts, FP8 KV cache. The last column is the share of datasheet bandwidth the server must reach for each stream to get 40 tokens/s. {.striped}
+
+At 32 streams a GPU meets the target only if vLLM reaches {{< var ch39.bw_need_32 >}} of datasheet
+bandwidth. That is the first number to measure. If it falls short, run fewer streams per GPU and
+buy more GPUs; if it does much better, 64 streams halve the interactive pool.
 
 Then size the fleet for both workloads:
 
 {{< include ../_generated/costs/ch39-sizing.md >}}
 
-: GPU sizing at today's volume, next year's, and ten times today's. Assistant input assumes 50% of prompt tokens hit the prefix cache. {.striped}
+: GPU sizing at today's volume, next year's and ten times today's, for all tokens. Interactive GPUs are arithmetic from the stream target; batch GPUs assume 50% of the datasheet ceiling, an assumption. The last two rows are the share of paid GPU-hours the work would occupy. {.striped}
 
-Today's whole load needs about {{< var ch39.today.assist_hours >}} GPU-hours a day for the
-assistant and {{< var ch39.today.extract_hours >}} for extraction, against 192 GPU-hours a day in one
-8-GPU node. One node is plenty, and most of it will sit idle. Hold on to that number; it decides
-the cost section.
+The interactive rows are Little's law. Today the assistant writes 40M tokens over 8 hours, doubled
+at the peak hour: 2,778 tokens/s. At 40 tokens/s per stream that is {{< var ch39.today.streams >}}
+streams in flight, three GPUs at 32 streams each, plus one spare. The work itself needs
+{{< var ch39.today.work_h >}} GPU-hours a day at the ceiling against {{< var ch39.today.gpus >}} x 24
+paid, so the fleet would be {{< var ch39.today.busy >}} busy even if every GPU ran at its datasheet
+ceiling. Hold on to that number; it decides the cost section.
 
 ## Version 0
 
@@ -90,251 +125,370 @@ backend and the extraction jobs both point at it. Weights are pulled from S3 whe
 
 ![Version 0: one node, eight replicas, one load balancer, both workloads mixed.](../images/39/v0.svg){fig-alt="Version 0. The product backend sends assistant requests and extraction jobs send document batches to an internal load balancer, which round-robins to a p5.48xlarge node running eight vLLM replicas of gpt-oss-120b, one GPU each. Weights load from S3 at start."}
 
-Continuous batching (<span class="ocode">O12</span>) is on by default in vLLM, so each replica
-already serves many requests at once. This works in a demo. Then we replay a real day.
+vLLM's defaults already do a lot. Continuous batching (<span class="ocode">O12</span>) serves many
+requests at once, chunked prefill is on by default in its V1 engine, and the engine enables prefix
+caching by default (though the official gpt-oss recipe's Hopper configuration switches it off, which
+matters in version 2). The scheduling policy defaults to first come, first served. That last default
+is where version 0 breaks.
 
 ## Where workload isolation breaks
 
-::: {.breaks}
-Replaying one day of production traffic against version 0 (worked scenario):
+An extraction job submits 400 documents at once, and under first come, first served an assistant
+request that arrives after them waits behind all of their prefill. Continuous batching shares the
+GPU fairly, and fairness is exactly wrong when one workload has a deadline in seconds and the other
+has one in hours.
 
-- Outside extraction bursts, assistant p95 time to first token is 0.7 s.
-- **During extraction bursts it rises to 8.4 s, and 9% of assistant requests time out.**
-- Extraction jobs submit up to 400 documents at once, each with 4,000 to 10,000 tokens of prompt.
+::: {.breaks}
+Burst: {{< var ch39.burst_docs >}} documents x 7,000 tokens = {{< var ch39.burst_tokens >}} prompt tokens, {{< var ch39.burst_per_replica >}} per replica under round robin.
+Eight GPUs at the prefill ceiling: {{< var ch39.burst_tokens >}} / (8 x {{< var ch39.pf_extract >}} tokens/s) = {{< var ch39.burst_s >}} s. At a quarter of the ceiling: {{< var ch39.burst_s_quarter >}} s.
+Assistant budget: first token within 1 s at p95.
 :::
 
-A replica processes prefill for every new request in its batch. When a few hundred long extraction
-prompts land at once, every replica spends seconds on prefill, and an assistant request queued
-behind them waits for all of it. Continuous batching shares the GPU fairly; fairness is exactly
-wrong when one workload has a deadline in seconds and the other has one in hours.
+The floor, with a perfect GPU, is four times the latency budget. Chunked prefill does not rescue it:
+it keeps streams that are already decoding moving while long prompts are processed in pieces, but
+new requests still wait their turn. You would see this as assistant p95 time to first token passing
+1 s (the target) whenever an extraction job is submitted.
 
 ## Version 1
 
-[**Changed** an inference gateway with priority classes, a batch queue drained by workers that back off under interactive load, and per-team keys and metering.]{.changed}
+[**Changed** an inference gateway with priority classes, two fixed replica pools, priority scheduling on every replica, and a batch queue drained by workers that back off under interactive load.]{.changed}
 
 **A gateway in front of the replicas.** Every caller gets a key, a workload class and a quota. The
 gateway meters tokens per key (the platform's cost attribution), enforces rate limits, and routes
-by class. Interactive requests may use any replica; batch requests may use only the replicas
-currently lent to batch.
+by class.
+
+**Two pools, fixed at launch.** In vLLM the settings that make a replica good at one workload are
+launch-time arguments: the speculative decoding configuration, the maximum number of sequences and
+the KV cache dtype. A replica cannot switch between interactive and batch roles without draining
+and restarting, so the node is split into two fixed pools: four interactive replicas and four batch
+replicas.
+
+**Priority inside each replica.** Every replica runs with `--scheduling-policy priority`, and the
+gateway sets each request's `priority` field by class (lower is served earlier). Batch requests may
+also go to interactive replicas at the lowest priority when interactive load is low, so the nights
+are not wasted.
 
 **Extraction goes through a queue.** Jobs submit documents to SQS rather than calling the model
-directly. A pool of workers drains the queue at a rate set by back-pressure: they watch the
-replicas' waiting-request count and the assistant's time to first token, and slow down when
-either rises. At night and weekends, when the assistant is quiet, they run every replica flat out.
-This is the self-hosted version of a batch API (<span class="ocode">O7</span>): the work waits,
-and in exchange it runs on capacity that would otherwise be idle.
+directly. Workers drain the queue at a rate set by back-pressure: they watch waiting requests and
+the assistant's time to first token, and slow down when either rises. This is the self-hosted
+version of a batch API (<span class="ocode">O7</span>): the work waits, and in exchange it runs on
+capacity that would otherwise be idle.
 
-**Chunked prefill** (<span class="ocode">O18</span>) on every replica splits long prompts into
-pieces interleaved with decode steps, so one 10,000-token document cannot stall every stream on
-that GPU.
+**Tune chunked prefill** (<span class="ocode">O18</span>). It is already on; its chunk size,
+`--max-num-batched-tokens`, trades one latency for another. vLLM's guidance is that smaller values
+give better inter-token latency because fewer prefill tokens slow each decode step; the gpt-oss
+recipe's Hopper configuration uses 8,192.
 
-![Version 1: priority classes in a gateway, and batch work that yields to interactive load.](../images/39/v1.svg){fig-alt="Version 1. Extraction jobs submit to a new SQS batch queue, drained by new batch workers that throttle on interactive load. The product backend and the batch workers call a new inference gateway with keys, quotas, metering and priority classes. The gateway sends interactive traffic to reserved interactive replicas and batch traffic to batch replicas that lend capacity to interactive at peak. New metrics on queue depth and time to first token feed back-pressure to the workers."}
+![Version 1: priority classes in a gateway, two fixed pools, and batch work that yields to interactive load.](../images/39/v1.svg){fig-alt="Version 1. Extraction jobs submit to a new SQS batch queue, drained by new batch workers that throttle on interactive load. The product backend and the batch workers call a new inference gateway with keys, quotas, metering and priority classes. The gateway sends interactive traffic to a new interactive pool with priority scheduling and batch traffic to a new batch pool, and may send batch work to the interactive pool at low priority. New metrics on queue depth and time to first token feed back-pressure to the workers."}
 
 ::: {.breaks}
-After version 1, same replay: assistant p95 time to first token 0.8 s all day, zero timeouts.
-Extraction finishes within 5 hours of submission, most of it overnight.
+The burst now lands on the four batch GPUs only: {{< var ch39.burst_tokens >}} / (4 x {{< var ch39.pf_extract >}} tokens/s) = {{< var ch39.burst_s4 >}} s at the ceiling, and no assistant request waits behind it.
+Watch: assistant p95 time to first token under 1 s through extraction submissions, and extraction backlog age under 6 hours (both targets).
 :::
 
 ## Where utilisation breaks
 
-The system now works. The bill and the dashboards show it is wasteful.
+The system now works, and the sizing table already says it is wasteful. This break needs no
+dashboard: it is a cost line.
 
 ::: {.breaks}
-First month on version 1 (worked scenario):
-
-- **GPU time used: 15% of what we pay for.** The sizing table predicted it: today's load needs about
-  {{< var ch39.today.assist_hours >}} + {{< var ch39.today.extract_hours >}} GPU-hours a day of 192.
-- **Prefix cache hit rate 6%.** The assistant's 1,800-token system prompt and each conversation's
-  history are reused across turns, but round-robin routing sends consecutive turns to different
-  replicas, so every replica recomputes them.
-- **The node runs on-demand at {{< var ch39.p5_hour >}} an hour,** about {{< var ch39.today.self_od >}} a month
-  with the cluster around it.
+Today's work needs {{< var ch39.today.work_h >}} GPU-hours a day at the ceiling; the node provides 192. Busy share at the ceiling: {{< var ch39.today.node_busy >}}. At any real efficiency it is higher, but nowhere near full.
+The node costs {{< var ch39.p5_hour >}} an hour on demand, about {{< var ch39.today.node_od >}} a month with the cluster around it.
+The same tokens on a hosted gpt-oss-120b API cost {{< var ch39.today.oss_api >}} a month.
 :::
+
+Two things cause it. The unit is too big: today's interactive peak needs three GPUs and one spare,
+and the batch work fits in one more, so three of the eight replicas have nothing to do. And the
+node carries every tenant's tokens, though the contracts restrict only some of them.
+
+Routing wastes some work too, though less than it might seem. Every assistant prompt starts with the
+same 1,800-token system prompt, so each replica keeps it cached whatever the routing: a floor of
+1,800 / 3,000 = {{< var ch39.hit_floor >}} of prompt tokens, provided nothing that varies per request
+(a date, a tenant name) is placed before it. History is different. With {{< var ch39.turns >}} turns
+per conversation (an assumption), each turn adds about {{< var ch39.hist_tokens >}} tokens. The chat
+format drops the previous turn's reasoning, so the cache matches up to the previous answer and each
+turn recomputes about {{< var ch39.hist_tokens >}} tokens: a hit rate of up to
+{{< var ch39.hit_affinity >}} if the turn lands where the last one ran. Round robin over eight
+replicas does that one time in eight: {{< var ch39.hit_floor >}} + 24% / 8 = {{< var ch39.hit_rr8 >}}.
 
 ## Version 2
 
-[**Changed** prefix-aware routing, FP8 KV cache, speculative decoding for interactive streams, and a 1-year commitment on the base node.]{.changed}
+[**Changed** single-GPU instances sized per pool, only restricted tenants on our GPUs, session routing, an FP8 KV cache on the batch pool, and speculative decoding on the interactive pool.]{.changed}
 
-**Prefix-aware routing** (<span class="ocode">O14</span>). The gateway hashes the first few
-thousand tokens of each request and routes requests with the same prefix to the same replica,
-falling back to the least-loaded replica when that one is busy. Turns of one conversation land on
-the replica that already holds their KV cache, and requests sharing the system prompt cluster
-together. In this scenario the hit rate rises from 6% to about 50%, which halves the assistant's
-prefill work. The sizing table assumed that 50%.
+**Right-size the unit** (<span class="ocode">O20</span>). AWS sells the H100 one at a time:
+p5.4xlarge is one H100 at {{< var ch39.p1_hour >}} an hour on demand, exactly an eighth of
+p5.48xlarge, with 16 vCPUs, 256 GiB of memory and one 3.84 TB NVMe drive. Each pool becomes its own
+set of instances, sized from the tables above.
 
-**FP8 KV cache** (<span class="ocode">O16</span>). As the numbers section showed, extraction
-batches of 128 do not fit without it. With it, each replica holds twice the sequences, and
-batch throughput roughly doubles over a BF16 cache.
+**Self-host only what must be.** The gateway knows each tenant's contract. Restricted tenants' requests go to
+our GPUs; everyone else's go to a hosted gpt-oss-120b API, with extraction on its batch tier at
+{{< var ch39.batch_in >}} and {{< var ch39.batch_out >}} per million input and output tokens. Same
+weights, so the outputs are comparable, and the release gate in version 4 checks that they stay so. At
+the assumed {{< var ch39.restricted_share >}} restricted share the fleet today is
+{{< var ch39.today.split_gpus >}} GPUs: {{< var ch39.today.split_inter >}} interactive (one for
+{{< var ch39.today.split_streams >}} peak streams, one spare) and {{< var ch39.today.split_batch >}}
+for batch.
 
-**Speculative decoding** (<span class="ocode">O15</span>) on interactive replicas, using a small
-draft head trained for this model. At a batch of 32 the GPU has spare compute, so verifying several
-drafted tokens per step costs little, and per-stream speed rises well above the
-{{< var ch39.per_stream >}} tokens a second in the table. It is off on batch replicas, where the GPU
-is already busy and the gain disappears.
+**Route by session** (<span class="ocode">O14</span>). The gateway hashes the session id onto the
+interactive replicas and falls back to the least-loaded one when the owner is busy. Every replica
+warms the system prompt with one request at start-up. Hashing the first few thousand tokens instead
+would be wrong here: every first turn shares them, so all new conversations would land on one
+replica. Session routing cuts the assistant's uncached prompt tokens from
+{{< var ch39.uncached_floor >}} to {{< var ch39.uncached_affinity >}}. In GPU time that is small: all
+of today's uncached assistant prefill is {{< var ch39.assist_prefill_hours >}} GPU-hours a day at
+the ceiling. The gain is time to first token at peak, not cost. Before relying on any of it, confirm
+that prefix caching works for gpt-oss on Hopper in the vLLM version you pin, since the recipe's
+Hopper configuration turns it off.
 
-**Pay less for the base.** The node is busy every night and most of the day; it will exist for at
-least a year. A 1-year EC2 Instance Savings Plan with no upfront payment brings it from
-{{< var ch39.p5_hour >}} to {{< var ch39.p5_sp_hour >}} an hour (<span class="ocode">O19</span>).
+**FP8 KV cache on the batch pool** (<span class="ocode">O16</span>). It lets
+{{< var ch39.eb_fp8 >}} documents share a GPU instead of {{< var ch39.eb_bf16 >}}. The decode
+ceiling rises from {{< var ch39.d_extract_bf16 >}} to {{< var ch39.d_extract >}} tokens/s,
+{{< var ch39.fp8_gain_batch >}} times, and nearly all of that comes from the bigger batch: at the
+same {{< var ch39.eb_bf16 >}} streams FP8 only trims the KV bytes each step reads, worth
+{{< var ch39.fp8_gain_same >}} times. Other context lengths and KV budgets move both factors, so
+treat them as arithmetic for these inputs. vLLM sets FP8 scales to 1.0 unless you calibrate them,
+and the recipe sets an FP8 cache only in its Blackwell configuration, so its quality on your
+documents is unknown until the golden set says otherwise.
 
-![Version 2: requests that share a prefix go to the replica that already has it cached.](../images/39/v2.svg){fig-alt="Version 2. The product backend calls the inference gateway, which now has keys, quotas and metering followed by a new prefix-aware router that sends the same prefix to the same replica. Replicas on a p5.48xlarge under a 1-year savings plan now use prefix caching, FP8 KV cache and draft-head speculative decoding. Session A goes to replica 1, session B to replica 2, batch to replica 3."}
+**Speculative decoding on the interactive pool** (<span class="ocode">O15</span>). NVIDIA publishes
+an EAGLE3 draft head for gpt-oss-120b, which the vLLM recipe uses, so no draft model has to be
+trained. Verifying {{< var ch39.spec_k >}} drafted tokens per stream makes a step carry
+{{< var ch39.spec_tokens >}} tokens, which touch {{< var ch39.spec_touched >}} of the experts instead
+of {{< var ch39.touched_32 >}}. The step reads {{< var ch39.spec_ratio >}} times the bytes. Its
+arithmetic is still small ({{< var ch39.spec_flops_ms >}} ms at the BF16 ceiling, inside a
+{{< var ch39.step_a_ms >}} ms step), so the step stays bandwidth-bound and the question is how many
+drafted tokens survive.
+
+::: {.numbers}
+Speculation breaks even when each step yields {{< var ch39.spec_ratio >}} tokens per stream on average.
+With {{< var ch39.spec_k >}} drafted tokens that needs a per-token acceptance rate of about {{< var ch39.spec_accept_even >}}.
+A 1.5 times speed-up needs about {{< var ch39.spec_accept_15 >}}.
+The draft head's own weights and reads are left out, which flatters it slightly.
+:::
+
+Measure acceptance on your own traffic before counting on it. On the batch pool the arithmetic is
+kinder (the step grows only {{< var ch39.spec_ratio_batch >}} times, because
+{{< var ch39.eb_fp8 >}} streams already touch most experts), but the draft head's memory comes out
+of the KV budget that sets the batch, and extraction has hours of slack. Leave it off there until a
+test shows more tokens per GPU-hour.
+
+**Commit after measuring.** A 1-year EC2 Instance Savings Plan for the p5 family takes the GPU-hour
+from {{< var ch39.p1_hour >}} to {{< var ch39.p1_sp_hour >}} ({{< var ch39.p1_sp_off >}} off). It
+covers any p5 size in the region and binds you to the family for a year:
+{{< var ch39.today.commit_split >}} for today's {{< var ch39.today.split_gpus >}} GPUs, against
+{{< var ch39.node_commit >}} for one p5.48xlarge. A Compute Savings Plan is
+{{< var ch39.p1_csp_hour >}} ({{< var ch39.p1_csp_off >}} off) but follows you to other instance
+families, which is worth paying for if H200 or B200 instances may become the better buy within the
+year. Commit to the floor of the fleet only once single-GPU capacity and the bandwidth share are
+confirmed.
+
+![Version 2: single-GPU instances per pool, restricted tenants on our GPUs, everyone else on a hosted API.](../images/39/v2.svg){fig-alt="Version 2. The product backend and batch workers call the inference gateway, which now has keys, quotas and metering followed by new tenant and session routing. Restricted interactive traffic goes by session to new interactive replicas with an EAGLE3 draft head, restricted batch traffic to a new batch replica with an FP8 KV cache, both on p5.4xlarge instances with one H100 each. Unrestricted tenants go to a new hosted gpt-oss-120b API."}
 
 ::: {.breaks}
-After version 2: prefix hit rate about 50%, extraction throughput per replica up about 1.9 times,
-assistant streams faster. The monthly bill falls to about {{< var ch39.today.self_sp >}}. Utilisation
-is still low, because one node is the smallest unit AWS sells for H100s and today's load needs a
-fraction of it.
+Today's restricted work occupies {{< var ch39.today.split_busy >}} of the {{< var ch39.today.split_gpus >}} GPUs' paid time at the ceiling.
+The fleet is now set by its minimum (one interactive replica, one spare, one batch replica), not by the tokens.
 :::
 
 ## Where resilience breaks
 
-::: {.breaks}
-Second and third months (worked scenario):
+A small fleet has two failures the arithmetic can show and one it can only watch for.
 
-- A GPU on the node reported an uncorrectable memory error. The replica on it crashed; the node was
-  drained and replaced. **Assistant traffic was degraded for 40 minutes,** because one node was the
-  whole fleet.
-- **A replacement replica took 9 minutes from node start to serving**: 61 GB pulled from S3, then
-  loaded and warmed.
-- Planning for next year's 3x volume: a second p5 node in us-east-1 was not available on demand
-  for two weeks.
+::: {.breaks}
+Blast radius: repairing a faulty GPU means stopping or replacing its instance. On a p5.48xlarge that takes eight replicas; on a p5.4xlarge, one. With one interactive replica and one spare, the restricted assistant survives one GPU failure; a second failure, or a lost availability zone, leaves it queuing.
+Recovery time: a replacement instance starts with an empty NVMe drive (instance store does not survive a stop or termination), so its replica downloads {{< var ch39.weights_gb >}} GB from S3. At the instance's 100 Gbps network that takes at least {{< var ch39.load_s >}} s; real S3 throughput, the container image pull and warm-up add to it. Target: serving within 10 minutes of instance start.
+Capacity: on-demand H100s may not be there when you scale. Watch the time from a scale-up request to a running replica; above an hour, the growth plan is at risk.
 :::
 
 ## Version 3
 
-[**Changed** a fallback path for approved tenants, a local weight cache, GPU health handling, scaling on the right signals, and reserved capacity for growth.]{.changed}
+[**Changed** a spare in a second availability zone, a GPU health controller, weights copied to local NVMe, scaling per pool on leading signals, and capacity reserved ahead of growth.]{.changed}
 
-**Fallback, within the contract.** Redundancy at today's volume would mean a second p5 node to
-cover failures, doubling the bill for a machine that is idle unless something breaks. Instead, the
-gateway knows which tenants' documents may go to Bedrock. When local capacity is lost or overloaded,
-it sends those tenants' assistant requests to Claude on Bedrock, which costs more per token but
-only during incidents. Restricted tenants' requests queue, and their extraction waits; the
-contracts allow delay, not a different processor. This is cheaper than idle redundancy until the
-fleet is large enough that losing one node out of several is survivable on its own.
+**A spare, not a second node.** Redundancy at the GPU level costs one p5.4xlarge,
+{{< var ch39.spare_month >}} a month on the savings plan, not a second eight-GPU node. Put the
+spare and its partner in different availability zones, so that one zone does not take both.
 
-**Weights on local NVMe.** The p5 has 8 local NVMe drives. A daemon copies the current model
-version there at node boot, and replicas load from local disk. Start-to-serving falls from 9 minutes
-to under 2. Fast loaders that stream weights directly into GPU memory cut it further.
+**No fallback for restricted tenants.** The contracts allow delay, not a different processor. When
+the interactive pool is short, restricted requests queue at the gateway with an explicit status,
+and batch work yields first. Unrestricted tenants are already on the hosted API, so the platform
+needs no Bedrock fallback; one would add a second model to test and a second route out of the
+boundary.
 
-**GPU health.** A controller watches GPU error counters and replica health. On an uncorrectable
-error it marks the replica unhealthy, stops routing to it, and drains the node if more than one GPU
-is affected. Most faults take out one replica, not the node, so seven of eight keep serving.
+**GPU health.** A controller watches GPU error counters from DCGM and replica health. On an
+uncorrectable error it marks the replica unhealthy, stops routing to it, cordons the node and
+replaces the instance. With single-GPU instances there is no question of which other replicas to
+drain.
 
-**Scale on the signals that lead.** Replica count follows waiting requests, KV cache utilisation
-and time to first token, never CPU or GPU utilisation, which are high whenever batch work is
-running. At today's volume this matters little (one node), but the rule is in place before the
-second node arrives.
+**Weights on local NVMe.** A daemon copies the current release to the instance's NVMe drive at
+boot, and pods load from it. That makes pod restarts and release switches on a live instance fast.
+It does nothing for a replacement instance, whose drive starts empty, so the S3 download stays on
+the recovery path and is the step to measure.
 
-**Reserve before you need it.** For next year's volume, buy a capacity reservation or capacity
-block for the second node ahead of the growth, not when the queue is already long.
+**Scale each pool on the signals that lead.** The interactive pool follows waiting requests and KV
+cache use; the batch pool follows queue age. Never scale on CPU or GPU utilisation, which are high
+whenever batch work runs. At today's size this matters little, but the rule is in place before the
+fleet grows.
 
-![Version 3: fallback for approved tenants, weights cached locally, and faulty GPUs drained automatically.](../images/39/v3.svg){fig-alt="Version 3. The inference gateway routes to an EKS GPU node group with node 1 and a new node 2 added at 3x volume through a capacity reservation. A new local NVMe weight cache, prefetched from S3 at boot, loads weights in under a minute. A new health controller drains nodes on GPU errors. When a node is down or overloaded, the gateway sends approved tenants to a new Bedrock fallback."}
+**Reserve before you need it.** Capacity Blocks reserve p5.4xlarge in us-east-1 up to eight weeks
+ahead, for days or weeks at a time. For a standing fleet, an On-Demand Capacity Reservation that
+starts immediately holds capacity in one zone for as long as you pay for it, and combines with a
+Savings Plan for the discount. AWS's future-dated reservations do not cover the P family, so
+reserve when the capacity is there, not when the queue is already long.
+
+![Version 3: a spare in a second zone, weights cached locally, and faulty GPUs replaced automatically.](../images/39/v3.svg){fig-alt="Version 3. The inference gateway, now health-aware, routes to an EKS GPU node group of p5.4xlarge instances in two availability zones, with the new spare in zone b. A new copy of the weights on instance NVMe, copied from S3 at boot, serves fast pod restarts. A new health controller cordons nodes on GPU errors. A new capacity reservation holds instances ahead of growth."}
 
 ## Where model changes break
 
+Self-hosting puts every part of the output path in your hands: weights, tokeniser, chat template,
+server version and its settings. A server upgrade that changes how the chat template renders tool
+calls, or a switch to the FP8 KV cache, can change outputs without anyone thinking they changed the
+model. The extraction pipeline retries invalid JSON, so a drop in validity shows up as extra load,
+not as an error.
+
 ::: {.breaks}
-Fourth month (worked scenario): an upgrade of the serving engine changed how the model's chat
-template handled tool-call formatting. **Extraction JSON validity fell from 99.6% to 97.1%, and
-nobody noticed for two days,** because the extraction pipeline retried invalid outputs and the
-retries looked like normal load. Meanwhile the extraction team wanted to deploy a LoRA adapter
-trained on 50,000 labelled claims, and had no safe way to do it.
+How you would see it: JSON validity, field accuracy and retries per document, per release. Target: a release whose validity or accuracy on the golden set is below the stable release's by more than the set's noise ([F4](../foundations/f4-evaluation.qmd)) has broken, and so has one that raises retries per document in canary.
+The hosted path changes too: the provider runs its own server, quantisation and template, and can change them without a release on your side.
 :::
 
 ## Version 4
 
-[**Changed** a model registry that versions everything that affects outputs as one unit, an evaluation gate, canary routing with automatic comparison, and multi-adapter serving.]{.changed}
+[**Changed** a model registry that versions everything that affects outputs as one unit, an evaluation gate for both serving paths, canary routing on the spare GPU, and a judge inside the boundary.]{.changed}
 
 **Version everything that changes outputs, together.** A model release in the registry is the
-weights, the tokeniser, the chat template, the serving engine version, its configuration
-(quantisation, KV cache type, speculative decoding) and any adapters. Changing any one of them is a
-new release. Most self-hosting incidents come from changing one of these and assuming the others
-did not matter.
+weights, the tokeniser, the chat template, the serving engine version and its configuration
+(KV cache type, draft head, scheduling settings). Changing any one of them is a new release. The
+usual self-hosting incident is changing one of these and assuming the others did not matter.
 
 **An evaluation gate.** Each release runs both workloads' golden sets
 ([F4](../foundations/f4-evaluation.qmd)) before deployment: field accuracy and JSON validity for
 extraction, judged correctness and latency for the assistant. The build fails on any regression
-outside the noise.
+outside the noise. The hosted API serves the same weights through someone else's stack, so the same
+golden sets run against it weekly and after any provider notice. A regression there is fixed by
+routing, since you cannot roll back their release.
 
-**Canary routing.** A passing release takes 5% of traffic for a day. The gateway compares it with
-the stable release on live metrics: JSON validity, retries, refusals, latency, and a sampled judge.
-It promotes or rolls back automatically.
+**Canary routing.** A passing release takes 5% of restricted traffic for a day, on the spare GPU: the
+gateway weights the split, so the canary replica need not take a quarter of the traffic just
+because it is one of four. That costs no extra GPU but removes the spare during a rollout; renting
+one more on-demand instance for two days instead costs {{< var ch39.canary_od_2d >}}. The gateway
+compares canary and stable on JSON validity, retries, refusals, latency and a sampled judge, and
+promotes or rolls back automatically.
 
-**Adapters without extra GPUs.** vLLM serves several LoRA adapters on one base model, choosing the
-adapter per request. The extraction adapter adds a few hundred megabytes, not a second model,
-and goes through the same gate.
+**A judge inside the boundary.** Restricted documents never go to a hosted judge. The judge is the
+stable release at high reasoning effort, run on the batch pool off-peak, comparing canary and
+stable answers. It shares the model's blind spots, so it catches regressions between releases, not
+absolute quality; that is what the golden set is for. A hosted judge may score unrestricted
+tenants' samples.
 
-![Version 4: releases are bundles, gated by evaluation, promoted by canary.](../images/39/v4.svg){fig-alt="Version 4. A new model registry holds weights, tokeniser, template and server version as one unit. A new eval gate runs a golden set per workload and promotes candidates to canary. The gateway sends 95% to the stable version and 5% to a new canary version. A new adapter store loads the extraction LoRA per request. A new online comparison of JSON validity, latency and a judge promotes or rolls back."}
+![Version 4: releases are bundles, gated by evaluation, promoted by canary, judged inside the boundary.](../images/39/v4.svg){fig-alt="Version 4. A new model registry holds weights, tokeniser, template, server version and configuration as one unit. A new eval gate runs a golden set per workload and promotes candidates to canary. The gateway sends traffic to the stable release and 5% to a new canary release on the spare GPU. A new online comparison of JSON validity, retries and a judge sends sampled pairs to a new judge, the stable release at high reasoning effort, inside the boundary, and promotes or rolls back."}
 
 ## The final design
 
-![The final design: a gateway that owns priority, routing and fallback; replicas that are simple; a platform that owns change.](../images/39/final.svg){fig-alt="Final design. Callers are the product backend and batch workers draining a batch queue. Both call the inference gateway, which handles keys, quotas and metering, then priority and prefix-aware routing with a canary split. It routes to vLLM replicas on an EKS GPU node group, one per H100, serving gpt-oss-120b with LoRA adapters, loaded from a local NVMe weight cache. Overflow and outages go to a Bedrock fallback. The platform has a model registry feeding an eval gate and canary, and metrics on time to first token, queue, KV use and prefix hits, which send back-pressure to batch workers."}
+![The final design: a gateway that owns tenants, priority and routing; single-GPU replicas that are simple; a platform that owns change.](../images/39/final.svg){fig-alt="Final design. Callers are the product backend and batch workers draining a batch queue. Both call the inference gateway, which handles keys, quotas and metering, then tenant, priority and session routing with a canary split. Restricted traffic goes to interactive replicas with a spare and EAGLE3, and restricted batch to batch replicas with an FP8 KV cache, on p5.4xlarge GPU nodes in EKS across two zones, loading weights from instance NVMe. Unrestricted traffic leaves through an egress proxy with an allow-list to a hosted gpt-oss-120b API. The platform has a model registry feeding an eval gate and canary, and metrics on time to first token, inter-token latency, queue, KV use and prefix hits, which send back-pressure to batch workers."}
 
 | Component | Choice | Why |
 |---|---|---|
-| Model | gpt-oss-120b, MXFP4 weights, LoRA adapter for extraction | Passes both golden sets; fits one H100 per replica |
-| Serving engine | vLLM, one replica per GPU, continuous batching, chunked prefill, prefix caching, FP8 KV cache | Mature, OpenAI-compatible, multi-LoRA. SGLang and TensorRT-LLM are credible alternatives; benchmark on your traffic |
-| Hardware | AWS p5.48xlarge (8x H100), 1-year savings plan; capacity reservation for growth | Contracts require our AWS account; the model fits an H100 |
-| Orchestration | EKS with a GPU node group and the NVIDIA GPU operator | Same platform as everything else the team runs |
-| Gateway | Keys, quotas, metering, priority classes, prefix-aware routing, canary split, tenant-aware fallback | All policy in one place; replicas stay simple |
+| Model | gpt-oss-120b, MXFP4 experts, medium reasoning effort | Assumed to pass both golden sets; fits one H100 per replica |
+| Serving engine | vLLM, one replica per GPU, priority scheduling, prefix caching, FP8 KV on batch, EAGLE3 on interactive | Mature, OpenAI-compatible, has a gpt-oss recipe. SGLang and TensorRT-LLM are credible alternatives; benchmark on your traffic |
+| Hardware | AWS p5.4xlarge (1x H100): {{< var ch39.today.split_inter >}} interactive including a spare, {{< var ch39.today.split_batch >}} batch, today | The smallest H100 unit AWS sells; a failure costs one replica |
+| Unrestricted tokens | Hosted gpt-oss-120b API, batch tier for extraction | Cheaper per token than our GPUs at any utilisation this workload reaches |
+| Orchestration | EKS with a GPU node group in two zones and the NVIDIA GPU operator | Same platform as everything else the team runs |
+| Gateway | Keys, quotas, metering, priority classes, tenant and session routing, canary split | All policy in one place; replicas stay simple |
 | Batch path | SQS plus workers with back-pressure | Fills idle capacity without hurting interactive latency |
-| Weights | S3 as source of truth, NVMe cache per node | Minutes to recover instead of ten |
-| Release process | Registry bundles, eval gate, 5% canary | Upgrades were the largest source of silent regressions |
-| Fallback | Claude on Bedrock for approved tenants only | Cheaper than idle redundancy at one node |
+| Weights | S3 as source of truth, copied to instance NVMe | Fast pod restarts; replacements are bounded by the S3 download |
+| Release process | Registry bundles, eval gate on both paths, 5% canary, judge inside the boundary | Upgrades change outputs silently; restricted data never leaves |
+| Commitment | EC2 Instance Savings Plan for the fleet's floor, after measuring | {{< var ch39.p1_sp_off >}} off, but a year in one instance family |
 
 ## Deployment
 
 - **Cluster:** EKS in us-east-1, private subnets, no public endpoints. The GPU node group runs
-  p5.48xlarge with the NVIDIA GPU operator and node feature discovery; a separate CPU node group
-  runs the gateway, workers and monitoring.
-- **Replicas:** a Kubernetes Deployment per model release, eight pods per node, one GPU each.
-  Readiness checks pass only after the model has answered a warm-up request. Pod disruption budgets
-  stop more than one replica draining at a time.
-- **Gateway:** stateless, three replicas across availability zones. Envoy AI Gateway, LiteLLM or a
-  small custom service all fit; what matters is that it owns keys, classes, routing and metering.
-- **Scaling:** at one node, nothing scales but the batch workers. From two nodes up, KEDA scales
-  replicas on waiting requests and KV cache use, and the cluster autoscaler adds nodes from a
-  reserved pool.
+  p5.4xlarge in two availability zones with the NVIDIA GPU operator; a separate CPU node group runs
+  the gateway, workers, egress proxy and monitoring.
+- **Replicas:** a Kubernetes Deployment per pool per release, one GPU per pod. Readiness checks pass
+  only after the model has answered a warm-up request. Pod disruption budgets stop more than one
+  replica in a pool draining at a time.
+- **Gateway:** stateless, three replicas across availability zones, so a zone loss leaves it
+  serving the GPUs in the other. Envoy AI Gateway (now renamed Agent Router), LiteLLM, whose proxy
+  has virtual keys with spend tracking and per-key rate limits, or a small custom service all fit.
+  Check whether your choice can set vLLM's per-request priority and route by session; expect to
+  write some of that yourself.
+- **Scaling:** KEDA's Prometheus scaler drives each pool from its own query (waiting requests and
+  KV use for interactive, queue age for batch), and the cluster autoscaler adds instances from
+  reserved capacity.
 - **Observability:** the serving engine's Prometheus metrics (time to first token, inter-token
-  latency, waiting requests, KV cache use, prefix hit rate) plus GPU counters from DCGM, with
-  traces from the gateway carrying tenant, class, release and token counts.
-- **Data boundary:** prompts and outputs for restricted tenants never leave the VPC. The gateway
-  enforces the tenant list for fallback, and the rule has its own test in CI.
+  latency, waiting requests, KV cache use, prefix hit rate, draft acceptance) plus GPU counters
+  from DCGM, with traces from the gateway carrying tenant, class, release and token counts.
+- **Data boundary, enforced by the network:** GPU and gateway subnets have no route to the
+  internet; they reach S3 through a VPC endpoint. The only way out is an egress proxy in its own
+  subnet. It accepts requests only from the gateway, only for tenants on an approved list owned by
+  whoever owns the contracts, and only to the hosted API's hostname; anything else is dropped, so a
+  bug fails closed. The API credentials exist only in that proxy's role. Every egress request is
+  logged with its tenant, and an alarm pages on any restricted tenant in that log or any traffic
+  from the GPU subnets to anything but the endpoints. A CI test of the tenant list stays, but it
+  checks configuration; the network is what enforces it.
 
 ## Cost
 
-Five ways to serve the same tokens, at today's volume, next year's, and ten times today's. Prices as
+Eight ways to serve the same tokens, at today's volume, next year's and ten times today's. Prices as
 of {{< var prices.as_of >}}. The self-hosted rows include the EKS control plane, two CPU nodes for
-the gateway and workers, and weight storage; they do **not** include people.
+the gateway and workers, and S3 ({{< var ch39.overhead >}} a month). They leave out people, staging
+and evaluation runs, the canary, and NAT and egress for the hosted path.
 
 {{< include ../_generated/costs/ch39-options.md >}}
 
-: Monthly cost of serving both workloads. Bedrock rows assume the assistant's prompt caching; Bedrock lists no batch price for these models, so extraction pays the full rate. Hosted API rows use batch pricing for extraction. {.striped}
+: Monthly cost of serving both workloads. Hosted rows use batch pricing for extraction where the provider offers it (Fireworks does; Bedrock lists no batch price for these models), and assistant prompt caching at the 60% system-prompt floor. Bedrock rows use Global cross-region rates; Geo and in-region rates are 10% higher. Self-hosted GPU counts come from the sizing table, so the batch pool rests on the assumed 50% of the ceiling. {.striped}
 
-Read the table in three steps.
+Read the table in four steps.
 
-**First, the model change is the saving.** Today's {{< var ch39.today.api_today >}} becomes
-{{< var ch39.today.self_sp >}} on our own committed GPUs. But Claude Haiku 5.5 on the same Bedrock
-account would cost {{< var ch39.today.haiku_api >}}, and gpt-oss-120b on a hosted API
-{{< var ch39.today.oss_api >}}. Almost all of the saving comes from moving off a large proprietary
-model, not from owning GPUs. If the contracts had allowed it, the right answer to "will
-self-hosting save money?" would have been "no; switch models and stay on an API".
+**First, the model change is the saving.** Today's {{< var ch39.today.api_today >}} (or
+{{< var ch39.today.api_today_geo >}} at Geo rates) becomes {{< var ch39.today.oss_api >}} for
+gpt-oss-120b on a hosted API. Claude Haiku 5.5 on the same Bedrock account would cost
+{{< var ch39.today.haiku_api >}}, if it passed the golden set, which nobody has tested here. Almost
+all of the saving comes from moving off a large proprietary model, not from owning GPUs. Without
+the contracts, the answer to "will self-hosting save money?" would be "no; switch models and stay on
+an API".
 
-**Second, the contract has a price.** The cheapest compliant option costs about
-{{< var ch39.today.self_sp >}} a month against {{< var ch39.today.oss_api >}} for the same model on a
-hosted API. The difference is what the data boundary costs, and it is worth putting in front of
-whoever negotiates those contracts.
+**Second, self-hosting every token loses at every volume.** On single-GPU instances with a savings
+plan it costs {{< var ch39.today.sp_vs_api >}}, {{< var ch39.next_year.sp_vs_api >}} and
+{{< var ch39.at_10x.sp_vs_api >}} times the hosted API. The reason does not depend on how efficient
+the servers turn out to be, which the break-even table shows.
 
-**Third, utilisation is the whole game.** At full utilisation, our own H100s produce input tokens at
-about {{< var ch39.unit_in_p5 >}} per million and output tokens at about {{< var ch39.unit_out_p5 >}}
-per million on AWS on-demand, and {{< var ch39.unit_in_lambda >}} and {{< var ch39.unit_out_lambda >}}
-at a GPU cloud. Hosted APIs charge {{< var ch39.oss_in >}} and {{< var ch39.oss_out >}} for the same
-model. So owned GPUs only match a competitive hosted price when they are busy almost all the time,
-and today ours are idle {{< var ch39.today.idle_share >}} of the day. The "per-GPU cloud,
-autoscaled" row shows what renting GPUs one at a time and only when needed would cost; it is not
-allowed here, but it shows how much of the self-hosted cost is idle capacity.
+{{< include ../_generated/costs/ch39-breakeven.md >}}
+
+: What one GPU-hour must produce to match gpt-oss-120b's hosted price. Input and output columns: tokens per second per GPU at batch prices, and in brackets that rate as a share of the prefill or batch-pool decode ceiling. Mix columns: the workload's GPU-hours at the ceiling, priced, over its hosted cost; that is the share of the ceiling a fully busy GPU must average to break even. {.striped}
+
+Read the output column first. At batch prices even a savings-plan GPU would have to write
+{{< var ch39.be.sp.out_tok >}} tokens a second, {{< var ch39.be.sp.out_pct >}} of the decode ceiling:
+no server and no utilisation gets there. Input is the opposite, at {{< var ch39.be.sp.in_pct >}} of
+the prefill ceiling. Mixed as the workloads mix them, a fully busy savings-plan GPU matches the
+hosted price if it averages {{< var ch39.be.sp.ext >}} of the ceiling on extraction and
+{{< var ch39.be.sp.ast >}} on the assistant. Whether vLLM sustains a third or half of datasheet on
+this model is a measurement, and nobody should buy hardware before making it.
+
+The fleet's problem is that it is not fully busy, and here the arithmetic needs no measurement. A
+fleet of G GPUs costs 24 x G x price a day; the work needs W GPU-hours at the ceiling; the hosted
+bill is C. The fleet is cheaper only if W / (24 x G) is above W x price / C: the share of paid time
+the work needs at the ceiling must exceed the break-even share, {{< var ch39.be.sp.blend >}} for the
+whole mix on the savings plan. Today's fleet needs {{< var ch39.today.busy >}}, and
+{{< var ch39.at_10x.busy >}} at ten times the volume. Put the other way, today's hosted bill buys
+{{< var ch39.today.api_buys_gpus >}} savings-plan GPUs, and the assistant's latency target alone needs
+four. The stream target, not the token volume, sets the fleet: interactive GPUs are
+{{< var ch39.today.inter_share >}} of it today.
+
+**Third, the contract has a price.** The cheapest compliant option keeps only the restricted share
+on our GPUs: {{< var ch39.today.split >}} a month today against {{< var ch39.today.oss_api >}} for
+everything on the hosted API. The difference is what the data boundary costs, and it is worth
+putting in front of whoever negotiates those contracts. It moves with the restricted share, which is
+an assumption here; ask for the real one first.
+
+**Fourth, the unit matters as much as the commitment.** For all tokens today, a p5.48xlarge on a
+savings plan costs {{< var ch39.today.node_sp >}} a month against {{< var ch39.today.self_sp >}} for
+right-sized p5.4xlarge instances on the same plan. Buying eight GPUs because that is the shape
+everyone quotes is the most expensive mistake available at this size.
 
 Then add people. A platform that needs a GPU-literate on-call rotation, model upgrades every few
-months and an evaluation gate costs real engineering time. At one node, that time can cost more
-than the node.
+months and an evaluation gate costs real engineering time; at three GPUs that time can cost more
+than the GPUs. Smaller lines left out of the table: a staging GPU on demand for each release's
+golden-set run, the canary instance if you rent one, NAT and egress for the hosted path, and
+evaluation runs against the hosted API.
 
 ## Optimisation
 
@@ -343,36 +497,45 @@ in this system.
 
 | Code | Technique | Effect here |
 |---|---|---|
-| <span class="ocode">O12</span> | Continuous batching | The baseline; without it each GPU would serve one request at a time |
-| <span class="ocode">O13</span> | Quantisation | The model ships in 4-bit MXFP4; this is why one replica fits one GPU |
-| <span class="ocode">O14</span> | Prefix caching with prefix-aware routing | Halves the assistant's prefill work (hit rate from 6% to about 50%) |
-| <span class="ocode">O15</span> | Speculative decoding | Faster interactive streams at low batch; off for batch replicas |
-| <span class="ocode">O16</span> | FP8 KV cache | Makes batches of 128 long documents fit at all |
+| <span class="ocode">O7</span> | Batch APIs, and a queue as a private one | Extraction waits for idle capacity on our GPUs, and uses the hosted batch tier for unrestricted tenants |
+| <span class="ocode">O12</span> | Continuous batching | The baseline; on by default |
+| <span class="ocode">O13</span> | Quantisation | MXFP4 experts are why one replica fits one GPU; on an H100 they save memory, not arithmetic |
+| <span class="ocode">O14</span> | Prefix caching with session routing | Uncached assistant prompt from {{< var ch39.uncached_floor >}} to {{< var ch39.uncached_affinity >}} (four-turn assumption); under half a GPU-hour a day at the ceiling, so mostly a latency gain |
+| <span class="ocode">O15</span> | Speculative decoding | Breaks even at about {{< var ch39.spec_accept_even >}} draft acceptance, 1.5x at about {{< var ch39.spec_accept_15 >}}; interactive pool only until measured |
+| <span class="ocode">O16</span> | FP8 KV cache | Batch pool fits {{< var ch39.eb_fp8 >}} documents instead of {{< var ch39.eb_bf16 >}}; decode ceiling {{< var ch39.fp8_gain_batch >}}x |
 | <span class="ocode">O17</span> | Parallelism | Not needed: one replica per GPU is the cheapest layout for a model that fits |
-| <span class="ocode">O18</span> | Chunked prefill | Long extraction prompts no longer stall interactive streams |
-| <span class="ocode">O19</span> | Commitments and batch on idle capacity | Savings plan cuts the node cost by about a third; extraction runs on night capacity |
-| <span class="ocode">O7</span> | A queue as a private batch API | The same idea as a vendor batch API, applied to our own idle GPUs |
+| <span class="ocode">O18</span> | Chunked prefill | On by default; tune its chunk size for inter-token latency. Disaggregation is not worth it at this size |
+| <span class="ocode">O19</span> | Autoscaling and spot | See below |
+| <span class="ocode">O20</span> | Right-sizing the hardware | Single-GPU instances: {{< var ch39.today.node_sp >}} to {{< var ch39.today.self_sp >}} a month for all tokens |
+
+Autoscaling (<span class="ocode">O19</span>) has one clear use here. The interactive pool needs its
+full size only for the business day: one p5.4xlarge on demand for 10 hours costs
+{{< var ch39.p1_day_od_10h >}}, against {{< var ch39.p1_day_sp >}} for 24 hours on the savings plan.
+So the part of the pool above the floor is cheaper on demand, provided instances can be launched
+each morning; without a reservation that is a bet on capacity. Extraction is the natural spot
+workload, since an interruption only returns documents to the queue. Check whether spot capacity
+for p5 exists in your region before planning on it.
 
 Two optimisations would cut cost further and were not taken. **A smaller model for the assistant**
-(<span class="ocode">O9</span>): if a 20B-class model passed the assistant's golden set, it would
-need a fraction of the GPU time, but today's load already fits in the node we have, so the saving
-would be zero until volume grows. **Distillation** (<span class="ocode">O10</span>) of extraction
-into a small fine-tuned model: the largest long-term saving available, and a project of its own
-(System 41).
+(<span class="ocode">O9</span>): if a 20B-class model passed the assistant's golden set, it could
+run more streams per GPU, and the interactive pool is most of the fleet. **Distillation**
+(<span class="ocode">O10</span>) of extraction into a small fine-tuned model: the largest long-term
+saving available, and a project of its own (System 41).
 
 ## Operating it
 
-| Metric | Healthy | Alert when |
+| Metric | Healthy (target) | Alert when (target) |
 |---|---|---|
 | Assistant time to first token, p95 | Under 1 s | Over 1.5 s for 10 minutes |
-| Inter-token latency, p95 | Under 30 ms | Over 50 ms |
-| Waiting requests per replica | Near zero for interactive | Above 4 for 5 minutes |
+| Inter-token latency, p95 | Under {{< var ch39.itl_target_ms >}} ms (40 tokens/s) | Over {{< var ch39.itl_target_ms >}} ms for 10 minutes |
+| Waiting requests per interactive replica | Near zero | Above 4 for 5 minutes |
 | KV cache use | Under 90% | Above 95% with preemptions |
-| Prefix cache hit rate | About 50% on the assistant | Drops by half: routing or prompt changed |
+| Prefix cache hit rate, assistant | {{< var ch39.hit_floor >}} to {{< var ch39.hit_affinity >}} | Below {{< var ch39.hit_floor >}}: caching is off or something per-request precedes the system prompt |
+| Draft acceptance rate | Above {{< var ch39.spec_accept_15 >}} | Below {{< var ch39.spec_accept_even >}}: speculation now costs time |
 | Extraction backlog age | Under 6 hours | Over 8 hours |
 | GPU errors (DCGM) | None | Any uncorrectable error |
-| JSON validity, extraction | Above 99.5% | Below 99%, or retries rising |
-| Fallback traffic | Zero outside incidents | Any sustained fallback |
+| JSON validity, extraction, per release and per path | Within the golden set's noise of the stable release | Below it, or retries rising |
+| Restricted tenants in the egress log | Zero | Any |
 
 **Failure modes to expect.**
 
@@ -381,48 +544,64 @@ into a small fine-tuned model: the largest long-term saving available, and a pro
   the point where this starts, and alert on preemptions, not just on cache use.
 - **Silent template or tokeniser drift.** The cause of the fourth break. Treat any change to the
   serving stack as a model change.
-- **A poisoned prefix cache after a prompt change.** A new system prompt shares nothing with the
-  old one, so the hit rate drops and prefill doubles until caches refill. Expect a latency bump after
-  every prompt deploy; do not deploy prompts at peak.
-- **Capacity you cannot buy.** GPUs are not elastic in the way CPUs are. Plan nodes a quarter ahead.
+- **A cold prefix cache after a prompt change.** A new system prompt shares nothing with the old
+  one, so the uncached share of each prompt jumps from {{< var ch39.uncached_affinity >}} to all of
+  it until the caches refill. Expect a latency bump after every prompt deploy; do not deploy prompts
+  at peak.
+- **Capacity you cannot buy.** GPUs are not elastic in the way CPUs are. Plan instances a quarter
+  ahead.
 - **Throughput claims from benchmarks.** Published numbers use short prompts and ideal batches. Your
-  prompts are 4,000 tokens long and arrive in bursts. Benchmark your own traffic with the engine's
-  load-testing tool before committing to hardware.
+  prompts are 7,000 tokens long and arrive in bursts. Measure the bandwidth share at 32 streams and
+  the prefill rate on your own documents with the engine's benchmarking tool before committing.
 
 ## Variants
 
 **If there were no data boundary,** do not build this. Run the golden sets on small proprietary
 models and on hosted open models, and use the cheapest API that passes. Revisit self-hosting when
-hosted spend on one model is several times the cost of the nodes it would need, and the load is
-steady enough to keep them busy.
+the busy share at the ceiling of the fleet you would need is above the break-even share in the table.
+
+**If most tokens were restricted,** the split saves little and the all-token rows apply. The
+recommendation stands; the bill is closer to the self-hosted rows.
 
 **If the cloud's managed service offered the open model inside your account,** check whether the
 contract counts it as "a model provider's service". If not, it removes the GPU operations entirely
-and may be cheaper than a mostly idle node.
+and is likely cheaper than a fleet that is mostly idle.
+
+**If extraction needed a fine-tune.** 50,000 labelled claims at 7,000 tokens is
+{{< var ch39.ft_tokens >}} tokens an epoch. At 6 FLOPs per active parameter per token (forward and
+backward, an upper bound for LoRA), an epoch is {{< var ch39.ft_hours >}} hours of an 8-GPU node at
+the BF16 ceiling, or {{< var ch39.ft_hours_tenth >}} at a tenth of it. The model card says the 120B
+model fine-tunes on a single H100 node, and inside the boundary that means a p5.48xlarge in our
+account, on demand or in a Capacity Block, at {{< var ch39.node_day_od >}} a day. vLLM serves LoRA
+adapters for gpt-oss, one adapter per request, and the adapter becomes one more component of a
+release.
 
 **If the model did not fit on one GPU** (a dense 70B model in FP8 needs two H100s; larger models
 need a node), tensor parallelism enters, replicas become 2 or 4 GPUs wide, and failures take out
 more capacity at once. The memory arithmetic in [F2](../foundations/f2-numbers.qmd) decides the
 width.
 
-**At 10x volume** the fleet is five nodes and redundancy comes free: losing one node of five is
-survivable without fallback. Utilisation rises, the cost per token approaches the hosted price,
-and disaggregated prefill and decode (<span class="ocode">O18</span>) start to pay for their
-complexity.
+**At 10x volume** the all-token fleet is {{< var ch39.at_10x.gpus >}} GPUs, and on the savings plan it
+still costs {{< var ch39.at_10x.sp_vs_api >}} times the hosted API. Even at the ceiling
+{{< var ch39.at_10x.idle >}} of its paid time is idle, because {{< var ch39.at_10x.inter >}} of the GPUs
+are the interactive pool sized for one peak hour. The restricted share alone is
+{{< var ch39.at_10x.split_gpus >}} GPUs, large enough that losing one is routine, and disaggregated
+prefill and decode (<span class="ocode">O18</span>) start to be worth a test.
 
 **If latency mattered more than cost** (a voice agent, say, as in [System 28](28-voice-agent.qmd)),
-run interactive replicas at smaller batches with speculative decoding, accept lower throughput per
-GPU, and keep them separate from any batch work.
+run interactive replicas at 16 streams, which need only {{< var ch39.bw_need_16 >}} of datasheet
+bandwidth for 40 tokens/s, use speculative decoding, and keep them separate from any batch work.
 
 ## Trade-offs
 
 | Decision | Alternative | Why we chose it |
 |---|---|---|
-| Self-host gpt-oss-120b | Stay on Bedrock with a smaller model | The contracts forbid model provider services for two customers; otherwise the API would win on cost |
+| Self-host gpt-oss-120b for restricted tenants only | Self-host every token | Hosted tokens are cheaper at any utilisation this fleet reaches; the contracts restrict only some tenants. Revisit if the restricted share approaches all of it |
+| p5.4xlarge, one GPU per instance | p5.48xlarge nodes | The fleet needs a few GPUs, not eight; a failure costs one replica |
 | One replica per GPU | Tensor-parallel replicas | The model fits one GPU; this is the cheapest and most fault-tolerant layout |
-| Gateway with priority classes | Separate clusters per workload | One node cannot be split usefully; classes and back-pressure share it safely |
-| Prefix-aware routing | Round robin | Hit rate from 6% to about 50%, halving assistant prefill |
-| Bedrock fallback for approved tenants | A second node for redundancy | Pays only during incidents; becomes unnecessary at several nodes |
-| 1-year savings plan | On-demand | The base node is busy every night for at least a year |
-| Release bundles with eval gate and canary | Upgrade components independently | Silent template drift cost two days of degraded extraction |
-| vLLM | SGLang or TensorRT-LLM | Mature, multi-LoRA, OpenAI-compatible; the decision is revisited by benchmark, not by preference |
+| Two fixed pools with priority scheduling | One pool shared by class | Batch size, KV dtype and speculation are launch-time settings; a replica cannot be both |
+| Session routing | Round robin, or hashing the prompt prefix | Keeps history cached; prefix hashing sends every first turn to one replica |
+| A spare GPU, queue on overload | Bedrock fallback | Restricted tenants cannot use it, and it adds a model to test and a route out |
+| Savings plan after measuring | Commit on day one | A year in one instance family; settle capacity and the bandwidth share first |
+| Release bundles with eval gate, canary and an in-boundary judge | Upgrade components independently | Template and KV changes alter outputs silently; restricted data never leaves |
+| vLLM | SGLang or TensorRT-LLM | Mature, has a gpt-oss recipe, OpenAI-compatible; the decision is revisited by benchmark, not by preference |

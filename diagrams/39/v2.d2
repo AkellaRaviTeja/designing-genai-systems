@@ -1,19 +1,21 @@
 ...@../_theme
 direction: down
 app: Product backend {class: svc}
+w: Batch workers {class: svc}
 gw: Inference gateway {
   class: zone
   auth: Keys, quotas, metering {class: svc}
-  route: "Prefix-aware router\nsame prefix, same replica" {class: [svc; new]}
+  route: "Tenant and session routing" {class: [svc; new]}
   auth -> route
 }
 app -> gw.auth
-node: "p5.48xlarge on a 1-year savings plan" {
+w -> gw.auth
+pool: "p5.4xlarge instances, one H100 each" {
   class: zone
-  r1: "Replica: prefix cache,\nFP8 KV, draft-head decoding" {class: [model; new]}
-  r2: Replica {class: model}
-  r3: Replica {class: model}
+  ia: "Interactive replicas\nEAGLE3 draft, 32 streams" {class: [model; new]}
+  ba: "Batch replica\nFP8 KV, large batch" {class: [model; new]}
 }
-gw.route -> node.r1: session A {class: hot}
-gw.route -> node.r2: session B
-gw.route -> node.r3: batch
+gw.route -> pool.ia: "restricted, by session" {class: hot}
+gw.route -> pool.ba: restricted batch
+api: "Hosted gpt-oss-120b API\nunrestricted tenants" {class: [ext; new]}
+gw.route -> api: unrestricted

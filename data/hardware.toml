@@ -7,7 +7,8 @@ memory_gb = 80
 bandwidth_tb_s = 3.35
 bf16_tflops = 989
 fp8_tflops = 1979
-source = "NVIDIA H100 Tensor Core GPU datasheet, SXM5 form factor"
+source = "NVIDIA H100 Tensor Core GPU datasheet, SXM5 form factor (https://www.nvidia.com/en-us/data-center/h100/). The page lists 1,979 BF16 and 3,958 FP8 TFLOPS with sparsity; these are the dense halves. No FP4 format is listed."
+checked = "2026-11-04"
 
 [gpu.H200]
 memory_gb = 141
@@ -55,14 +56,20 @@ source = "Meta Llama 3.1 8B model card and config.json"
 [model.gpt-oss-120b]
 params_b = 116.8
 active_b = 5.1
-weights_gb = 61
+checkpoint_bytes = 65248815744   # model.safetensors.index.json total_size: 65.2 GB, 60.8 GiB
 layers = 36
+sliding_layers = 18              # layer_types alternate sliding_attention and full_attention
+sliding_window = 128
+attention_heads = 64
 kv_heads = 8
 head_dim = 64
+hidden = 2880
+intermediate = 2880              # per expert
+vocab = 201088
 experts = 128
 experts_per_token = 4
-expert_param_share = 0.95
-source = "OpenAI gpt-oss-120b model card and config.json (MXFP4 mixture-of-experts weights)"
+source = "OpenAI gpt-oss-120b model card, config.json and model.safetensors.index.json on Hugging Face (MXFP4 expert weights; attention, router, embeddings and lm_head unquantised)"
+checked = "2026-11-04"
 
 [model.bge-reranker-v2-m3]
 params_b = 0.568
