@@ -325,7 +325,8 @@ model API are negotiated to at least twice the expected peak. A BAA is needed an
 pricing page says it signs them for Enterprise customers), and that contract is where the quota is
 set. A second speech-to-text and text-to-speech vendor, also under a BAA, is configured for
 failover and tested weekly with a slice of traffic. Switching vendors mid-call changes the voice,
-so it is a last resort.
+so it is a last resort. For the model API, the fallback route and its quota belong in the shared
+[gateway](36-llm-gateway.qmd).
 
 **Recordings and analysis after the call.** Audio and transcripts go to encrypted object storage
 with 12-month retention. Every call is summarised and classified after it ends with a small model:

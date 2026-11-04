@@ -1,0 +1,22 @@
+...@../_theme
+direction: down
+
+apps: Features {class: actor}
+
+gw: Gateway {
+  class: zone
+  route: "Route by alias:\nfeature to model chain" {class: [svc; new]}
+  cls: "Classify error:\nretry, fail over, or stop" {class: [svc; new]}
+  brk: "Breaker per provider\nand model; retry budget" {class: [svc; new]}
+  route -> cls
+  cls -> brk
+}
+
+anth: "Claude API\nSonnet 5.5" {class: ext}
+bed: "Bedrock\nSonnet 5.5, same weights" {class: [ext; new]}
+oai: "OpenAI\nGPT-6.1 Sol" {class: [ext; new]}
+
+apps -> gw.route: "calls an alias"
+gw.brk -> anth: "first choice"
+gw.brk -> bed: "same model,\ncold cache"
+gw.brk -> oai: "only features\nevaluated on it" {class: async}

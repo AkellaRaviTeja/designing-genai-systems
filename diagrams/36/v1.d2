@@ -1,0 +1,31 @@
+...@../_theme
+direction: right
+
+inter: "Interactive features" {class: actor}
+async: "Extraction and\nevaluation workers" {class: actor}
+
+gw: Gateway {
+  class: zone
+  auth: "Internal key:\nteam, feature, class" {class: svc}
+  bucket: "Buckets per feature,\nbudget per class" {class: [svc; new]}
+  hdr: "Read rate-limit\nheaders" {class: [svc; new]}
+  auth -> bucket
+  bucket -> hdr
+}
+
+vk: "Valkey\nbucket state" {class: [store; new]}
+anth: Claude API {
+  class: ext
+  ws1: "Workspace:\ninteractive" {class: [ext; new]}
+  ws2: "Workspace:\nasync, capped" {class: [ext; new]}
+  ws3: "Workspace:\noffline, capped" {class: [ext; new]}
+  batch: "Message Batches:\nbackfills, sweeps" {class: [ext; new]}
+}
+
+inter -> gw.auth
+async -> gw.auth
+gw.bucket <-> vk
+gw.hdr -> anth.ws1
+gw.hdr -> anth.ws2
+gw.hdr -> anth.ws3
+gw.hdr -> anth.batch: "can wait\na day" {class: offline}

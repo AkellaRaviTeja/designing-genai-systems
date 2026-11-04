@@ -1,0 +1,35 @@
+...@../_theme
+direction: down
+
+apps: "Feature services\nworkload identity" {class: actor}
+
+gw: Gateway, three zones {
+  class: zone
+  auth: "Identity, allowlist,\ntags required" {class: svc}
+  lim: "Budgets and token\nbuckets per class" {class: svc}
+  route: "Alias to model chain,\nbreakers, retry budget" {class: svc}
+  meter: "Meter from usage" {class: svc}
+  auth -> lim -> route -> meter
+}
+
+vk: "Valkey\nbuckets, breakers" {class: store}
+pg: "Postgres\nkeys, routes, prices" {class: store}
+s3: "Usage records\nS3" {class: store}
+eg: "Egress proxy" {class: svc}
+
+anth: "Claude API\nthree workspaces" {class: ext}
+bed: "Bedrock\nsame models" {class: ext}
+oai: "OpenAI\njudge, evaluated fallback" {class: ext}
+batch: "Batch APIs\nwork that can wait" {class: ext}
+rec: "Daily reconciliation\nagainst invoices" {class: svc}
+
+apps -> gw.auth
+gw.lim <-> vk
+gw.auth <- pg
+gw.meter -> s3 {class: async}
+gw.route -> eg
+eg -> anth
+eg -> oai
+gw.route -> bed
+eg -> batch {class: offline}
+s3 -> rec {class: offline}

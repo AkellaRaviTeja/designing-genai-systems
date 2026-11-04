@@ -1,0 +1,23 @@
+...@../_theme
+direction: down
+
+apps: "Feature services\nworkload identity" {class: actor}
+
+vpc: Halden VPC {
+  class: zone
+  gw: "Gateway\nshort-lived tokens,\nmodel allowlist, daily budget" {class: [svc; new]}
+  sm: "Secrets Manager\nprovider keys, rotated" {class: [store; new]}
+  eg: "Egress proxy:\nprovider hosts,\ngateway only" {class: [svc; new]}
+  gw -> sm: "read at start" {class: async}
+  gw -> eg
+}
+
+anth: "Claude API\nworkspace keys only" {class: ext}
+oai: OpenAI {class: ext}
+bed: "Bedrock\nVPC endpoint" {class: ext}
+
+apps -> vpc.gw: "signed token,\nno provider key"
+vpc.eg -> anth
+vpc.eg -> oai
+vpc.gw -> bed: "IAM role"
+apps -> anth: "blocked" {class: gone}

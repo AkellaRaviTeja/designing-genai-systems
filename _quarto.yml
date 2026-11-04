@@ -58,6 +58,7 @@ book:
         - systems/28-voice-agent.qmd
     - part: "The model platform"
       chapters:
+        - systems/36-llm-gateway.qmd
         - systems/39-self-hosted-inference.qmd
   appendices:
     - appendix/roadmap.qmd

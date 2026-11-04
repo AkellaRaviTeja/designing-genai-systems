@@ -1,0 +1,24 @@
+...@../_theme
+direction: down
+
+apps: "Features\nwith feature and tenant" {class: actor}
+
+gw: Gateway {
+  class: zone
+  tag: "Reject untagged\nrequests" {class: [svc; new]}
+  meter: "Price from usage fields,\nprovider actually used" {class: [svc; new]}
+  tag -> meter
+}
+
+prices: "Dated price table" {class: [store; new]}
+ledger: "Usage ledger" {class: [store; new]}
+rec: "Daily reconciliation" {class: [svc; new]}
+inv: "Provider cost reports\nand AWS tags" {class: ext}
+fin: Finance and teams {class: actor}
+
+apps -> gw.tag
+gw.meter <- prices
+gw.meter -> ledger {class: async}
+ledger -> rec {class: offline}
+inv -> rec {class: offline}
+rec -> fin: "cost by feature,\ngap explained"
