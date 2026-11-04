@@ -1,0 +1,92 @@
+---
+title: "Roadmap: the fifty systems"
+---
+
+Each system adds one idea to the ones before it. Levels run from ★ (one model call with good
+engineering around it) to ★★★★ (several interacting subsystems with hard latency, reliability or
+cost constraints). Systems marked **written** are in this edition.
+
+## Part I: Text in, text out
+
+| # | System | Level | The new idea it teaches |
+|---|---|---|---|
+| 1 | Support ticket classifier and router | ★ | Structured output, confidence thresholds, when a small model beats a frontier one |
+| 2 | Meeting and call summariser | ★ | Long context against map-reduce, evaluating summaries |
+| 3 | Catalogue description generator for 2M products | ★ | Batch APIs, bulk generation, sampling QA, brand voice without fine-tuning |
+| 4 | Email reply drafting assistant | ★★ | Personalisation from history, latency budgets, per-user privacy |
+| 5 | Invoice and KYC document extraction | ★★ | Vision models against OCR plus a model, schema validation, human review routing |
+| 6 | Content moderation at 50M items a day | ★★ | Multi-stage cascades, policy as prompt, throughput arithmetic |
+
+## Part II: Retrieval
+
+| # | System | Level | The new idea it teaches |
+|---|---|---|---|
+| 7 | [Simple RAG over a company wiki](../systems/07-simple-rag.qmd) **written** | ★★ | Chunking by structure, freshness, grounded answers, the quality loop |
+| 8 | Production RAG: hybrid search and reranking | ★★★ | Keyword plus vector search, rank fusion, cross-encoder reranking, query rewriting |
+| 9 | Conversational RAG with follow-ups | ★★ | Query condensation, history compression, token growth per turn |
+| 10 | Multi-tenant RAG for a SaaS product | ★★★ | Tenant isolation, permission-aware retrieval, cost attribution per tenant |
+| 11 | Multimodal RAG over PDFs with tables and charts | ★★★ | Layout parsing, visual retrieval, table handling |
+| 12 | Codebase question answering | ★★★ | Syntax-aware chunking, symbol graphs, repository maps |
+| 13 | Text-to-SQL analytics assistant | ★★★ | Schema retrieval, semantic layers, SQL validation, execution accuracy |
+| 14 | Contract review: long context or RAG | ★★★ | When to put the whole document in context, caching long documents |
+| 15 | GraphRAG for investigative research | ★★★★ | Entity extraction, community summaries, why indexing costs fifty times more |
+| 16 | Enterprise search across 30 SaaS tools | ★★★★ | Connectors, permission sync, freshness at scale |
+
+## Part III: Agents and tools
+
+| # | System | Level | The new idea it teaches |
+|---|---|---|---|
+| 17 | Tool-calling assistant | ★★ | Tool schemas, the token cost of tool definitions, error recovery |
+| 18 | Enterprise MCP platform | ★★★ | MCP servers and gateways, OAuth, tool discovery and search |
+| 19 | Support agent that issues refunds | ★★★ | Policy enforcement, human approval, idempotency, escalation |
+| 20 | Workflow automation with model steps | ★★★ | Durable execution, retries, human pauses; workflow against agent |
+| 21 | Data analysis agent with code execution | ★★★ | Sandboxing, file handling, keeping data out of the context |
+| 22 | Deep research agent | ★★★★ | Iterative retrieval, planning, web search, hard budget caps |
+| 23 | Multi-agent content pipeline | ★★★ | Orchestrator and workers, and when multi-agent is the wrong answer |
+| 24 | Computer-use agent for back-office work | ★★★★ | Screenshot token cost, reliability engineering, injection from the screen |
+| 25 | Coding agent | ★★★★ | Sandboxes, edit loops, tests as the verifier, cost per task solved |
+| 26 | Personal assistant with long-term memory | ★★★★ | Episodic and semantic memory, compaction, scheduled actions |
+
+## Part IV: Real-time and conversational
+
+| # | System | Level | The new idea it teaches |
+|---|---|---|---|
+| 27 | Consumer chat at 10M daily users | ★★★★ | Capacity planning, streaming, rate limits, conversation storage |
+| 28 | [Call-centre voice agent](../systems/28-voice-agent.qmd) **written** | ★★★★ | Streaming pipelines, a sub-second latency budget, turn-taking, cost per minute |
+| 29 | Live meeting copilot | ★★★ | Streaming transcription, incremental summaries |
+| 30 | AI tutor for school students | ★★★ | Pedagogy as a constraint, a model of the student, safety for minors |
+| 31 | Localisation pipeline for a product UI | ★★ | Glossaries, translation memory, batch against streaming |
+
+## Part V: Generation beyond text
+
+| # | System | Level | The new idea it teaches |
+|---|---|---|---|
+| 32 | Image generation service | ★★★ | Serving diffusion models, GPU queues, cost per image, safety filters |
+| 33 | Brand-consistent creative studio | ★★★ | Per-brand adapters, approval workflows, asset lineage |
+| 34 | Visual product search and auto-tagging | ★★ | Multimodal embeddings, catalogue backfill cost |
+| 35 | Video generation and editing pipeline | ★★★★ | Long job orchestration, preemption, cost per second of video |
+
+## Part VI: The model platform
+
+| # | System | Level | The new idea it teaches |
+|---|---|---|---|
+| 36 | LLM gateway | ★★★ | Multi-provider fallback, quotas, key management, cost attribution |
+| 37 | Prompt cache and semantic cache layer | ★★ | Hit-rate arithmetic, false hits, invalidation |
+| 38 | Model selection and routing | ★★★ | Evaluation-driven choice, cascades, learned routers |
+| 39 | [Self-hosted inference platform](../systems/39-self-hosted-inference.qmd) **written** | ★★★★ | GPU sizing, batching, quantisation, autoscaling, the break-even with APIs |
+| 40 | Fine-tuning pipeline | ★★★ | Fine-tune against prompt against RAG, data curation, serving many adapters |
+| 41 | Distilling a frontier model into a small one | ★★★ | Teacher labels, savings arithmetic, where quality falls off |
+| 42 | Preference tuning pipeline | ★★★★ | Preference data, reward hacking, evaluating the result |
+| 43 | Evaluation platform | ★★★ | Offline suites, judge calibration, CI gates, online experiments |
+| 44 | Guardrails service | ★★★ | Injection detection, redaction, output validation, the latency each adds |
+| 45 | LLMOps: tracing, prompt registry, cost dashboards | ★★ | Prompt versioning, trace sampling, unit economics per feature |
+| 46 | Synthetic data factory | ★★★ | Generate, filter, deduplicate, avoiding model collapse |
+
+## Part VII: Capstones
+
+| # | System | Level | The new idea it teaches |
+|---|---|---|---|
+| 47 | Clinical documentation scribe | ★★★★ | Health data rules, ambient audio, clinician sign-off |
+| 48 | Financial research copilot | ★★★★ | Numerical accuracy, provenance, compliance logging |
+| 49 | Shopping assistant on top of a recommender | ★★★ | Catalogue grounding, a model working with classic recommendation |
+| 50 | On-device assistant with cloud fallback | ★★★ | Small models on phones, splitting work between device and cloud |

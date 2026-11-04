@@ -1,0 +1,10 @@
+...@../_theme
+direction: right
+gpu: One H100, 80 GB, serving gpt-oss-120b {
+  class: zone
+  grid-columns: 3
+  grid-gap: 0
+  w: "Weights, MXFP4: 61 GB" {class: model; shape: rectangle; width: 610; height: 100}
+  kv: "KV cache\n~12 GB" {class: [store; new]; shape: rectangle; width: 130; height: 100}
+  rt: "Runtime\n~7 GB" {class: svc; shape: rectangle; width: 90; height: 100; style.font-size: 17}
+}

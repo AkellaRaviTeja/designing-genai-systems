@@ -1,0 +1,9 @@
+_book/
+.quarto/
+__pycache__/
+*.pyc
+.claude/
+/.luarc.json
+
+/.quarto/
+**/*.quarto_ipynb

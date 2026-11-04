@@ -1,0 +1,34 @@
+...@../_theme
+direction: down
+
+tel: Twilio {class: ext}
+lb: "Media stream router\nsticky per call" {class: [svc; new]}
+tel -> lb
+
+pool: Orchestrator pool, autoscaled on active calls {
+  class: zone
+  o1: Node 1, 40 calls {class: svc}
+  o2: Node 2, 40 calls {class: svc}
+  o3: Node N {class: [svc; new]}
+}
+lb -> pool.o1
+lb -> pool.o2
+lb -> pool.o3
+
+state: "Session checkpoints\nValkey" {class: [store; new]}
+pool -> state: per-turn state {class: async}
+
+vendors: Speech and model vendors {
+  class: zone
+  stt: "STT primary +\nfallback" {class: [ext; new]}
+  llm: LLM API {class: ext}
+  tts: "TTS primary +\nfallback" {class: [ext; new]}
+}
+pool -> vendors
+
+rec: "Recordings + transcripts\nS3, 12 months" {class: [store; new]}
+batch: "Post-call summaries\nbatch API" {class: [model; new]}
+qa: "QA review +\nsimulated-caller suite" {class: [svc; new]}
+pool -> rec {class: async}
+rec -> batch {class: offline}
+batch -> qa {class: offline}

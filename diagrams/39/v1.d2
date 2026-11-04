@@ -1,0 +1,21 @@
+...@../_theme
+direction: down
+app: Product backend {class: svc}
+jobs: Extraction jobs {class: svc}
+q: "Batch queue\nSQS" {class: [queue; new]}
+jobs -> q: submit
+gw: "Inference gateway\nkeys, quotas, metering,\npriority classes" {class: [svc; new]}
+app -> gw: interactive class {class: hot}
+w: "Batch workers\nthrottle on interactive load" {class: [svc; new]}
+q -> w
+w -> gw: batch class
+node: "p5.48xlarge, 8x H100" {
+  class: zone
+  ia: "Interactive replicas\nreserved" {class: model}
+  ba: "Batch replicas\nlend to interactive at peak" {class: model}
+}
+gw -> node.ia {class: hot}
+gw -> node.ba
+mon: "Metrics\nqueue depth, TTFT" {class: [store; new]}
+node -> mon {class: async}
+mon -> w: back-pressure {class: async}

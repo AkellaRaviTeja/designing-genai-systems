@@ -1,0 +1,19 @@
+...@../_theme
+direction: down
+app: Product backend {class: svc}
+gw: Inference gateway {
+  class: zone
+  auth: Keys, quotas, metering {class: svc}
+  route: "Prefix-aware router\nsame prefix, same replica" {class: [svc; new]}
+  auth -> route
+}
+app -> gw.auth
+node: "p5.48xlarge on a 1-year savings plan" {
+  class: zone
+  r1: "Replica: prefix cache,\nFP8 KV, draft-head decoding" {class: [model; new]}
+  r2: Replica {class: model}
+  r3: Replica {class: model}
+}
+gw.route -> node.r1: session A {class: hot}
+gw.route -> node.r2: session B
+gw.route -> node.r3: batch

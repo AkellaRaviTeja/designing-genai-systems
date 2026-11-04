@@ -1,0 +1,49 @@
+...@../_theme
+direction: down
+
+caller: Patient {class: actor}
+tel: "Twilio number +\nMedia Streams" {class: ext}
+router: Media stream router {class: svc}
+caller -> tel
+tel <-> router: audio, DTMF
+
+node: Orchestrator node, one session per call {
+  class: zone
+  stt: Streaming STT {class: ext}
+  vad: Turn detection {class: model}
+  ctl: Turn controller {class: svc}
+  llm: LLM, cached prefix {class: model}
+  auth: Identity state machine {class: svc}
+  gate: Tool gate {class: svc}
+  tts: Streaming TTS {class: ext}
+  canned: Pre-rendered phrases {class: store}
+  stt -> ctl
+  vad -> ctl
+  ctl -> llm
+  llm -> gate: tool calls
+  auth -> gate: verified?
+  llm -> tts: sentences
+  canned -> tts: {style.opacity: 0}
+}
+router -> node.stt
+router -> node.vad
+node.tts -> router: audio {class: hot}
+
+apis: Clinic systems {
+  class: zone
+  sched: Scheduling API {class: ext}
+  ehr: Patient record, read-only {class: ext}
+}
+node.gate -> apis.sched
+node.gate -> apis.ehr
+
+human: Human agent {class: actor}
+node.ctl -> human: transfer + summary
+
+data: After the call {
+  class: zone
+  rec: Recordings + transcripts {class: store}
+  batch: Post-call analytics {class: model}
+  rec -> batch {class: offline}
+}
+node.ctl -> data.rec {class: async}

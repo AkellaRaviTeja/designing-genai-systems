@@ -1,0 +1,64 @@
+name: book
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  QUARTO_VERSION: "1.11.9"
+  D2_VERSION: "0.9.0"
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: ${{ env.QUARTO_VERSION }}
+
+      - name: Install D2
+        run: |
+          curl -fsSL "https://github.com/terrastruct/d2/releases/download/v${D2_VERSION}/d2-v${D2_VERSION}-linux-amd64.tar.gz" | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/d2-v${D2_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Gates (lint, structure, stale costs, stale diagrams)
+        run: make check
+
+      - name: Render HTML and PDF
+        run: |
+          quarto render --to html
+          quarto render --to typst
+
+      - uses: actions/upload-pages-artifact@v5
+        if: github.event_name != 'pull_request'
+        with:
+          path: _book
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: check-and-build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

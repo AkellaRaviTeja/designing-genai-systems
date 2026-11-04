@@ -1,0 +1,78 @@
+project:
+  type: book
+  output-dir: _book
+  resources:
+    - images/**
+    - assets/**
+
+book:
+  title: "Designing GenAI Systems"
+  subtitle: "50 architectures, from the first question to the monthly bill"
+  author: "Ravi Teja"
+  date: "2026-11-03"
+  date-format: "D MMMM YYYY"
+  repo-url: https://github.com/AkellaRaviTeja/designing-genai-systems
+  repo-actions: [issue, source]
+  search: true
+  page-navigation: true
+  sidebar:
+    style: floating
+    collapse-level: 2
+  page-footer:
+    left: "Designing GenAI Systems by Ravi Teja. Text CC BY-NC-SA 4.0, code MIT."
+    right: "Prices as of {{< var prices.as_of >}}"
+  chapters:
+    - index.qmd
+    - part: "Foundations"
+      chapters:
+        - foundations/f1-method.qmd
+        - foundations/f2-numbers.qmd
+        - foundations/f3-models.qmd
+        - foundations/f4-evaluation.qmd
+        - foundations/f5-optimisation.qmd
+        - foundations/f6-safety-observability.qmd
+    - part: "Retrieval"
+      chapters:
+        - systems/07-simple-rag.qmd
+    - part: "Real-time and conversational"
+      chapters:
+        - systems/28-voice-agent.qmd
+    - part: "The model platform"
+      chapters:
+        - systems/39-self-hosted-inference.qmd
+  appendices:
+    - appendix/roadmap.qmd
+    - appendix/prices.qmd
+
+filters:
+  - theme/numbers.lua
+
+format:
+  html:
+    theme:
+      light: [theme/book.scss, theme/_tokens.scss]
+      dark: [theme/book.scss, theme/_tokens.scss, theme/_tokens-dark.scss]
+    include-after-body: theme/shell.html
+    respect-user-color-scheme: true
+    number-sections: false
+    toc: true
+    toc-depth: 2
+    toc-title: "In this chapter"
+    fig-cap-location: bottom
+    tbl-cap-location: top
+    code-copy: true
+    lightbox: auto
+    link-external-newwindow: true
+    smooth-scroll: false
+    anchor-sections: true
+    lang: en-GB
+  typst:
+    papersize: a4
+    margin:
+      x: 2.2cm
+      y: 2.4cm
+    mainfont: "Source Serif 4"
+    fontsize: 10.5pt
+    toc: true
+    number-sections: false
+    lang: en-GB

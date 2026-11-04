@@ -1,0 +1,40 @@
+...@../_theme
+direction: down
+
+clients: Callers {
+  class: zone
+  app: Product backend {class: svc}
+  w: Batch workers {class: svc}
+  q: Batch queue {class: queue}
+  q -> w
+}
+
+gw: Inference gateway {
+  class: zone
+  auth: Keys, quotas, metering {class: svc}
+  route: "Priority + prefix-aware\nrouting, canary split" {class: svc}
+  auth -> route
+}
+clients.app -> gw.auth
+clients.w -> gw.auth
+
+cluster: EKS, GPU node group {
+  class: zone
+  pool: "vLLM replicas, 1 per H100\ngpt-oss-120b + LoRA adapters" {class: model}
+  nvme: Local NVMe weight cache {class: store}
+  nvme -> pool {class: offline}
+}
+gw.route -> cluster.pool {class: hot}
+fb: Bedrock fallback {class: ext}
+gw.route -> fb: overflow, outage {class: async}
+
+ops: Platform {
+  class: zone
+  reg: Model registry {class: store}
+  ci: Eval gate + canary {class: svc}
+  mon: "Metrics: TTFT, queue,\nKV use, prefix hits" {class: store}
+  reg -> ci
+}
+ops.ci -> gw.route {class: async}
+cluster.pool -> ops.mon {class: async}
+ops.mon -> clients.w: back-pressure {class: async}

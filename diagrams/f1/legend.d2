@@ -1,0 +1,16 @@
+...@../_theme
+grid-columns: 4
+grid-gap: 36
+direction: right
+user: Person or caller {class: actor}
+api: Code we run {class: svc}
+llm: Model call {class: model}
+db: Data store {class: store}
+q: Queue or stream {class: queue}
+vendor: Third-party service {class: ext}
+added: Added in this version {class: [svc; new]}
+removed: Removed in this version {class: [svc; gone]}
+e1: "" {class: zone; e1a: "" {class: dot}; e1b: "" {class: dot}; e1a -> e1b: request path}
+e2: "" {class: zone; e2a: "" {class: dot}; e2b: "" {class: dot}; e2a -> e2b: background {class: async}}
+e3: "" {class: zone; e3a: "" {class: dot}; e3b: "" {class: dot}; e3a -> e3b: ingestion, batch {class: offline}}
+e4: "" {class: zone; e4a: "" {class: dot}; e4b: "" {class: dot}; e4a -> e4b: the hot path {class: hot}}

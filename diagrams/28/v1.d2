@@ -1,0 +1,21 @@
+...@../_theme
+direction: down
+
+caller: Patient {class: actor}
+tel: Twilio number {class: ext}
+caller -> tel: call
+
+bot: Orchestrator, one session per call {
+  class: zone
+  ws: Media stream socket {class: [svc; new]}
+  stt: Streaming STT {class: [model; new]}
+  llm: Streaming LLM {class: [model; new]}
+  chunk: Split at sentence ends {class: [svc; new]}
+  tts: Streaming TTS {class: [model; new]}
+  ws -> stt: 20 ms audio frames {class: hot}
+  stt -> llm: final transcript {class: hot}
+  llm -> chunk: tokens {class: hot}
+  chunk -> tts: first sentence {class: hot}
+  tts -> ws: audio frames {class: hot}
+}
+tel <-> bot.ws: bidirectional audio {class: hot}

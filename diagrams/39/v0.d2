@@ -1,0 +1,14 @@
+...@../_theme
+direction: down
+app: Product backend {class: svc}
+jobs: Extraction jobs {class: svc}
+lb: Internal load balancer {class: svc}
+app -> lb: assistant requests
+jobs -> lb: document batches
+node: "p5.48xlarge, 8x H100" {
+  class: zone
+  r: "8 x vLLM replica\ngpt-oss-120b, 1 GPU each" {class: model}
+}
+lb -> node.r: round robin
+s3: Model weights, S3 {class: store}
+s3 -> node.r: load at start {class: offline}

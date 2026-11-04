@@ -1,0 +1,102 @@
+---
+title: "F4 · Evaluation as architecture"
+description: "Every step from version 0 to the final design needs evidence. Evaluation is the component that produces it."
+---
+
+In classic systems you can reason about correctness: the cache returns what was stored, the
+queue delivers at least once. A model does not let you do that. It will be right on most inputs,
+wrong on some, and you will not know which until you check. So evaluation is not a phase at the end
+of the project. It is a component of the architecture, built before version 1, and every "where it
+breaks" section in this book starts with its output.
+
+## Three layers of checks
+
+| Layer | What it checks | Cost | Example |
+|---|---|---|---|
+| Deterministic | Structure and hard rules | Free, instant | Output parses as JSON; every citation ID exists; the SQL is read-only; the answer is under 200 words |
+| Reference-based | Agreement with a known answer | Cheap | Extracted invoice total equals the labelled total; the right document is in the top 5 |
+| Judged | Qualities a rule cannot capture | A model call per example, or a person's time | Is the answer correct and fully supported by the sources? Is the tone right? |
+
+Use them in that order. A deterministic check that catches 10% of failures for free beats a model
+judge that catches the same 10% for money. Most teams under-use the first layer.
+
+## Component and end-to-end
+
+Measure each stage separately as well as the whole. In a retrieval system, if the answer is wrong,
+the cause is either that retrieval missed the right passage or that the model misused a passage it
+had. Those need different fixes. So you measure **retrieval recall** (was the right passage in what
+we gave the model?) separately from **faithfulness** (did the answer use only what it was given?)
+and **correctness** (is the answer right?). [System 7](../systems/07-simple-rag.qmd) shows the
+pattern; nearly every system has an equivalent split.
+
+## The golden set
+
+A golden set is a list of inputs with what a good output looks like: a reference answer, the
+document that should be retrieved, the label, or a rubric. Three rules:
+
+1. **Real inputs.** Pull them from logs, tickets, chat history or the future users. Invented
+   examples are cleaner than reality and will flatter the system.
+2. **Stratified.** Include the hard and rare cases on purpose: ambiguous questions, questions with
+   no answer in the data, adversarial inputs, other languages. Tag each example with its category
+   so you can see which category broke.
+3. **Versioned.** Store it in the repository, change it through review, and never tune prompts on
+   the examples you report scores on. Keep a held-out slice.
+
+### How big
+
+A score on $n$ examples has a standard error of $\sqrt{p(1-p)/n}$. At an accuracy around 80%:
+
+::: {.numbers}
+n = 100   standard error 4.0 points   95% interval +/- 7.8 points
+n = 200   standard error 2.8 points   95% interval +/- 5.5 points
+n = 400   standard error 2.0 points   95% interval +/- 3.9 points
+n = 800   standard error 1.4 points   95% interval +/- 2.8 points
+:::
+
+So with 200 examples, a change from 80% to 84% is inside the noise. Two things help. Compare
+systems **on the same examples** and count only the examples where they disagree (a paired test
+needs far fewer examples than comparing two independent scores). And grow the set over time from
+production failures; a golden set that only grows is a regression suite.
+
+## Model as judge
+
+When a property needs judgement, a model can grade it. It works, if you treat the judge as a
+component that also needs evaluating.
+
+- **Prefer pairwise to absolute.** "Which of these two answers is better?" is more reliable than
+  "score this answer from 1 to 10".
+- **Known biases.** Judges prefer the first answer shown (randomise order), longer answers (tell
+  them length is not a criterion), and answers written by their own model family (use a judge
+  from a different family where it matters).
+- **Calibrate against people.** Have two people label 100 examples. Measure agreement between them
+  and between each of them and the judge, using Cohen's kappa. If the judge agrees with people
+  about as well as people agree with each other (kappa of 0.6 or more is a reasonable bar), use it.
+  If not, fix the rubric before trusting any number it produces.
+- **Give it a rubric, not a vibe.** "Correct means every factual claim in the answer appears in
+  the sources and none contradicts them" is gradeable. "Is this a good answer?" is not.
+
+Judging costs money. A 500-example run where each judgement reads 3,000 tokens and writes 200,
+on a workhorse model, is about 1.5M input and 100K output tokens: a few dollars per run. Cheap
+enough to run on every pull request that touches a prompt.
+
+## Evaluation in the delivery pipeline
+
+Treat prompts, model versions, retrieval settings and tool definitions as code. A change to any
+of them runs the evaluation in CI and fails the build if a score drops by more than the noise
+level for that set size. Report the count of examples evaluated with the score, and fail if the
+count is zero: an evaluation that examined nothing did not pass.
+
+## Online signals
+
+The golden set tells you about the cases you thought of. Production tells you about the rest.
+
+| Signal | What it means | Caveat |
+|---|---|---|
+| Explicit feedback (thumbs) | Direct, but rare | Under 2% of users click; skewed towards the annoyed |
+| Task completion | Did the user do the thing after the answer? | Needs product instrumentation |
+| Escalation or handoff rate | How often the system gave up or the user asked for a person | The single best health metric for support systems |
+| Reformulation rate | User asked again in different words within a minute | Strong sign the first answer missed |
+| Refusal rate | System said "I don't know" | Too low is as worrying as too high |
+
+Sample production traffic into a review queue every week, label it, and add the failures to the
+golden set. This loop, more than any model upgrade, is what makes systems better over time.

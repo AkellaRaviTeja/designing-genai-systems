@@ -1,0 +1,27 @@
+...@../_theme
+direction: down
+
+ingest: Ingestion, run once {
+  class: zone
+  wiki: Confluence export {class: ext}
+  split: Split every 500 tokens {class: [svc; gone]}
+  parse: Parse by heading, keep tables whole {class: [svc; new]}
+  header: Prefix title + heading path {class: [svc; new]}
+  emb: Embed chunks {class: model}
+  wiki -> parse -> header -> emb {class: offline}
+}
+
+db: Postgres + pgvector {class: store}
+ingest.emb -> db: vectors + text {class: offline}
+
+user: Employee {class: actor}
+query: Query path {
+  class: zone
+  api: Answer service {class: svc}
+  qemb: Embed question {class: model}
+  llm: Generate answer {class: model}
+  api -> qemb
+  api -> llm: question + 5 chunks
+}
+user -> query.api: question
+query.api -> db: top 5 by cosine

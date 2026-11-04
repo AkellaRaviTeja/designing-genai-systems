@@ -1,0 +1,154 @@
+---
+title: "F2 · The numbers"
+description: "Tokens, latency, throughput, memory and money: the arithmetic every chapter uses, and the constants worth memorising."
+---
+
+Most GenAI design arguments are settled by arithmetic you can do on a napkin. This chapter collects
+the formulas and the constants. Every system chapter uses them, and redoing their sums with your
+own inputs is the fastest way to adapt a design to your situation.
+
+## Tokens
+
+A token is the unit models read, write and bill. It is not a word and not a character.
+
+| Content | Rule of thumb | Why |
+|---|---|---|
+| English prose | 1 token is about 0.75 words, so 1,000 tokens is about 750 words | Common words are single tokens, rare ones split |
+| A dense A4 page | 500 to 700 tokens | About 400 to 500 words |
+| Source code | 1 token per 3 to 4 characters | Symbols and indentation tokenise poorly |
+| JSON | 20% to 40% more than the same data as CSV | Keys repeat on every row, braces and quotes cost tokens |
+| Hindi, Tamil, Telugu and other Indic scripts | Often 2 to 4 times the tokens of the same content in English | Tokenisers are trained mostly on English and split these scripts into short pieces |
+| An image (Claude) | About width x height / 750 tokens, so about 1,600 for a 1092 x 1092 image | Images are cut into patches; each patch costs tokens |
+
+The Indic row matters more than any other in this table if you build for Indian users. A support
+bot answering in Hindi can cost two or three times what the English version costs, with no change
+in design. Tokenisers differ between vendors and generations, so measure: every major API has a
+token-counting endpoint. Never compare vendors on price per token alone; compare them on price per
+task, using the same inputs.
+
+## Cost per request
+
+$$
+\text{cost} = \frac{T_{in} \cdot p_{in} + T_{out} \cdot p_{out} + T_{cached} \cdot p_{read}}{10^6}
+$$
+
+where $T$ are token counts and $p$ are prices per million tokens. Output tokens cost four to eight
+times as much as input tokens on current APIs, and exactly five times on the current Claude and
+GPT models. This one ratio drives a lot of design: a
+system that reads 2,000 tokens and writes 400 spends as much on the 400 as on the 2,000.
+
+::: {.numbers}
+A request with 2,000 input and 400 output tokens on Claude Sonnet 5.5
+  input:  2,000 x {{< var f.sonnet.in >}} / 1M = {{< var f.f2.req_in >}}
+  output:   400 x {{< var f.sonnet.out >}} / 1M = {{< var f.f2.req_out >}}
+  total:  {{< var f.f2.req_total >}} per request, {{< var f.f2.req_month >}} per million requests
+  output share of the bill: {{< var f.f2.out_share >}}
+:::
+
+Two things make this formula lie if you are not careful. Reasoning models think before they
+answer, and thinking tokens are billed as output, so a 400-token answer can cost 2,000 output tokens.
+And in a multi-turn conversation or an agent loop, every turn re-sends the whole history as
+input, so input tokens grow with the square of the number of turns (see
+<span class="ocode">O3</span> in [F5](f5-optimisation.qmd)).
+
+The gap between tiers is large. Claude Fable 5.1 costs {{< var f.fable.in >}} per million input
+tokens; Claude Haiku 5.5 costs {{< var f.haiku.in >}}. That is a factor of
+{{< var f.ratio.frontier_small >}}. Choosing the tier is the largest cost decision in most
+systems, which is why [F3](f3-models.qmd) gives it a whole chapter.
+
+## Latency
+
+For a hosted model, one call takes:
+
+$$
+t = t_{\text{queue}} + t_{\text{prefill}} + \frac{T_{out}}{\text{decode speed}}
+$$
+
+Time to first token (queue plus prefill) is typically 300 ms to 1.5 s for hosted APIs, longer for
+very long prompts and for reasoning models that think first. Decode speed is typically 40 to 150
+tokens per second per stream. So output length dominates: 300 output tokens at 80 tokens per second
+is 3.75 seconds, whatever you do about the network.
+
+Three consequences show up in every chapter:
+
+1. **Stream** anything a person reads. Streaming does not make the call faster, but the reader
+   starts at the time to first token instead of the time to last token.
+2. **Shorten outputs** before you shop for a faster model. Asking for a terse format often halves
+   latency and output cost at the same time.
+3. **Parallelise independent calls.** Three sequential calls of 2 seconds each is 6 seconds; in
+   parallel it is 2.
+
+## Throughput and concurrency
+
+Little's law connects arrival rate, duration and concurrency:
+
+$$
+\text{concurrent requests} = \text{arrival rate} \times \text{time per request}
+$$
+
+At 20 requests per second and 6 seconds per request, 120 requests are in flight at any moment. That
+number sizes connection pools, websocket servers, rate-limit tiers and, if you self-host, GPU
+memory. API providers limit requests per minute and tokens per minute (input and output
+separately); check that the peak, not the average, fits inside your tier.
+
+Daily traffic is not flat. For business tools, assume 80% of the day's requests arrive in about 8
+hours, and a peak hour at about twice the average of those hours. For consumer apps, check the
+evening peak. Size for the peak; pay for the average only if your capacity is elastic.
+
+## Memory on a GPU
+
+You need this only if you self-host (see [System 39](../systems/39-self-hosted-inference.qmd)), but
+when you do, it decides everything.
+
+**Weights.** Parameters times bytes per parameter. A 70B-parameter model such as Llama 3.3 70B
+needs about {{< var f.f2.w70_fp16 >}} GB in 16-bit precision, {{< var f.f2.w70_fp8 >}} GB in FP8 and
+{{< var f.f2.w70_int4 >}} GB in 4-bit. An H100 has 80 GB.
+
+**KV cache.** Every token in every active sequence stores a key and a value vector in every layer:
+
+$$
+\text{KV bytes per token} = 2 \times \text{layers} \times \text{KV heads} \times \text{head dim} \times \text{bytes}
+$$
+
+For Llama 3.3 70B (80 layers, 8 KV heads, head dimension 128, FP16) that is
+{{< var f.f2.kv70_kb >}} KB per token, so one 8,192-token sequence holds
+{{< var f.f2.kv70_8k_gb >}} GB. For Llama 3.1 8B it is {{< var f.f2.kv8_kb >}} KB per token.
+Whatever memory is left after the weights decides how many sequences you can serve at once, which
+decides throughput.
+
+**Decode is memory-bound.** Producing one token for one sequence means reading every weight once.
+An H100 reads {{< var f.f2.h100_bw >}} TB/s, so a 70B model in FP8 split across two H100s cannot
+produce more than about {{< var f.f2.decode_ceiling_70_fp8_tp2 >}} tokens per second for a single
+stream, however fast the arithmetic units are. Batching is how self-hosting becomes economical:
+one read of the weights serves every sequence in the batch, so 64 sequences cost barely more per
+step than one.
+
+**Prefill is compute-bound.** Processing the prompt costs about $2 \times \text{parameters}$
+floating-point operations per token. At a realistic 40% of the H100's FP8 peak, a 70B model
+prefills about {{< var f.f2.prefill_tok_s >}} tokens per second per GPU.
+
+## Storage for retrieval
+
+$$
+\text{index bytes} \approx \text{chunks} \times \text{dimensions} \times 4 \times 1.5
+$$
+
+Four bytes per float32 dimension, and about 1.5 times overhead for an HNSW graph index. A million
+chunks of 1,024 dimensions is about 6 GB. Most corpora are smaller than people expect: 40,000 wiki
+pages make about 180,000 chunks, under 2 GB with 1,536-dimension vectors. Storage is rarely the
+constraint. Re-embedding the corpus when you change embedding models is the cost to plan for.
+
+## Constants worth memorising
+
+| Quantity | Value |
+|---|---|
+| Words per English token | about 0.75 |
+| Output price / input price | 4x to 8x; 5x on current Claude and GPT models |
+| Hosted time to first token | 300 ms to 1.5 s |
+| Hosted decode speed | 40 to 150 tokens/s per stream |
+| Frontier / small model price ratio | about {{< var f.ratio.frontier_small >}}x |
+| Batch API discount | 50% |
+| Prompt cache read | 2.5% to 10% of the input price, depending on the model |
+| H100 memory and bandwidth | 80 GB, {{< var f.f2.h100_bw >}} TB/s |
+| 8x H100 on AWS (p5.48xlarge, on-demand) | {{< var f.f2.p5_hour >}}/hour, about {{< var f.f2.p5_month >}}/month |
+| Hours in a month | 730 |

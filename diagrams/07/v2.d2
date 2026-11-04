@@ -1,0 +1,32 @@
+...@../_theme
+direction: down
+
+ingest: Ingestion, continuous {
+  class: zone
+  wiki: Confluence API {class: ext}
+  sync: Sync job, changed since last run {class: [svc; new]}
+  hash: Skip unchanged by content hash {class: [svc; new]}
+  parse: Parse by heading {class: svc}
+  emb: Embed changed chunks {class: model}
+  wiki -> sync: every 15 min {class: offline}
+  sync -> hash -> parse -> emb {class: offline}
+}
+
+db: Postgres + pgvector {
+  class: store
+  label: "Postgres + pgvector\nchunks, vectors, page metadata"
+}
+ingest.emb -> db {class: offline}
+ingest.sync -> db: delete removed pages {class: [offline; hot]}
+
+user: Employee {class: actor}
+query: Query path {
+  class: zone
+  api: Answer service {class: svc}
+  qemb: Embed question {class: model}
+  llm: Generate answer {class: model}
+  api -> qemb
+  api -> llm: question + 5 chunks + dates
+}
+user -> query.api: question
+query.api -> db: "top 5, live spaces only,\none chunk set per page" {class: hot}

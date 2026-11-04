@@ -1,0 +1,42 @@
+...@../_theme
+direction: down
+
+conf: Confluence API {class: ext}
+slack: Slack {class: ext}
+user: Employee {class: actor}
+user -> slack
+
+ingest: Ingestion, every 15 min {
+  class: zone
+  sync: Sync changed pages {class: svc}
+  parse: Parse by heading + header {class: svc}
+  emb: Embed {class: model}
+  sync -> parse -> emb {class: offline}
+}
+conf -> ingest.sync {class: offline}
+
+db: "Postgres + pgvector\nchunks, vectors, metadata" {class: store}
+ingest.emb -> db {class: offline}
+ingest.sync -> db: deletes {class: offline}
+
+app: Answer service {
+  class: zone
+  bot: Slack handler {class: svc}
+  ret: Retrieve, filter, dedupe {class: svc}
+  gen: Grounded answer {class: model}
+  chk: Citation check {class: svc}
+  bot -> ret -> gen -> chk
+}
+slack -> app.bot
+app.chk -> slack: answer + sources
+app.ret -> db
+
+ops: Quality loop {
+  class: zone
+  fb: Feedback + traces {class: store}
+  rq: Weekly review {class: svc}
+  gs: Golden set {class: store}
+  ci: Eval in CI {class: svc}
+  fb -> rq -> gs -> ci {class: async}
+}
+app.bot -> ops.fb {class: async}

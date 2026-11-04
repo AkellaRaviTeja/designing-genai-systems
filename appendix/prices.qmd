@@ -1,0 +1,48 @@
+---
+title: "Prices"
+---
+
+Every cost in the book is computed from `data/prices.toml`. This appendix shows the prices in it.
+All are USD list prices, checked on {{< var prices.as_of >}} against the vendor's own pricing page or
+published price data. Each entry in the file records its source URL. Entries that could not be
+confirmed are marked unverified in the file, and the cost generator refuses to use them.
+
+List prices are a ceiling. Committed-use discounts, enterprise agreements and startup credits can
+cut them substantially, and the same GPU costs very different amounts on different clouds.
+
+## Model APIs
+
+{{< include ../_generated/costs/f-llm-prices.md >}}
+
+: USD per million tokens. Batch is the discount for asynchronous batch processing. {.striped}
+
+## Open-weight models through hosted APIs
+
+{{< include ../_generated/costs/f-hosted-prices.md >}}
+
+: USD per million tokens. {.striped}
+
+## Embeddings and rerankers
+
+{{< include ../_generated/costs/f-embed-prices.md >}}
+
+: USD per million tokens. {.striped}
+
+## GPUs
+
+{{< include ../_generated/costs/f-gpu-prices.md >}}
+
+: On-demand list prices; AWS prices are for us-east-1. Per month assumes 730 hours. {.striped}
+
+## Speech and telephony
+
+{{< include ../_generated/costs/f-voice-prices.md >}}
+
+: List prices. Telephony prices are per minute of call. {.striped}
+
+## Refreshing the prices
+
+1. Edit `data/prices.toml`: change the value, the `checked` date and, if it moved, the `source`.
+2. Run `make costs`. Every table and inline figure is regenerated.
+3. Run `make check` to confirm nothing is stale, then commit the data file and the generated
+   output together.

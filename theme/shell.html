@@ -1,0 +1,29 @@
+<script>
+// Splits a leading chapter number ("07 · ", "F1 · ") from titles so the shell can set it in
+// the pixel face: sidebar links, the chapter title, and previous/next links.
+(function () {
+  var NUM = /^\s*((?:F\d|\d{1,2}))\s*·\s*/;
+  function split(el, asBlock) {
+    if (!el || el.dataset.split) return;
+    var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    var node;
+    while ((node = walker.nextNode())) {
+      var m = node.nodeValue.match(NUM);
+      if (!m) { if (node.nodeValue.trim()) return; continue; }
+      var span = document.createElement("span");
+      span.className = asBlock ? "ch-num" : "num";
+      span.textContent = asBlock ? (/^F/.test(m[1]) ? "FOUNDATION " + m[1] : "SYSTEM " + m[1]) : m[1];
+      node.nodeValue = node.nodeValue.slice(m[0].length);
+      node.parentNode.insertBefore(span, node);
+      el.dataset.split = "1";
+      return;
+    }
+  }
+  document.querySelectorAll(".sidebar-link .chapter-title, .sidebar-link .menu-text, .nav-page .nav-page-text").forEach(function (e) { split(e, false); });
+  split(document.querySelector(".quarto-title .title"), true);
+  var t = document.querySelector(".sidebar-title a");
+  if (t && /GenAI/.test(t.textContent) && !t.querySelector(".pixel")) {
+    t.innerHTML = t.textContent.replace("GenAI", '<span class="pixel">GenAI</span>');
+  }
+})();
+</script>

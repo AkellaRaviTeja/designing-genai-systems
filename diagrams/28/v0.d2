@@ -1,0 +1,17 @@
+...@../_theme
+direction: down
+
+caller: Patient {class: actor}
+tel: Twilio number {class: ext}
+caller -> tel: call
+
+bot: Call handler {
+  class: zone
+  rec: Record until 1 s of silence {class: svc}
+  stt: Transcribe recording {class: model}
+  llm: Generate full reply {class: model}
+  tts: Synthesise full reply {class: model}
+  rec -> stt -> llm -> tts
+}
+tel -> bot.rec: audio
+bot.tts -> tel: play audio file

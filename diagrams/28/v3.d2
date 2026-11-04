@@ -1,0 +1,26 @@
+...@../_theme
+direction: down
+
+caller: Patient {class: actor}
+tel: Twilio {class: ext}
+caller -> tel
+
+bot: Orchestrator {
+  class: zone
+  conv: "Turn controller +\nstreaming STT, LLM, TTS" {class: svc}
+  auth: "Identity state machine\nnot the model" {class: [svc; new]}
+  tools: "Tool gate\ntools appear only after auth" {class: [svc; new]}
+  canned: Pre-rendered phrases {class: [store; new]}
+  conv -> auth: name, DOB, member ID
+  auth -> tools: verified {class: hot}
+  conv -> tools: tool calls
+  conv -> canned: greeting, disclosures, fillers
+}
+tel <-> bot.conv
+
+sched: "Scheduling API\nenforces booking rules" {class: [ext; new]}
+ehr: "Patient record\nread-only" {class: ext}
+bot.tools -> sched
+bot.tools -> ehr
+human: "Human agent desktop\nwith call summary" {class: [actor; new]}
+bot.conv -> human: warm transfer + summary {class: hot}

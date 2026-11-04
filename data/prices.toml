@@ -1,0 +1,1190 @@
+# Every price in the book comes from this file. Edit a value, run `make costs`, and every
+# generated table and inline figure updates. Prices are USD list prices, us-east-1 unless noted.
+# Each entry records its source and the date it was checked. verified = false means the
+# vendor page could not confirm it; the book never uses an unverified entry in a cost table.
+
+[meta]
+as_of = "2026-11-03"
+currency = "USD"
+
+[llm.anthropic.claude-fable-5-1]
+input = 10.00
+output = 50.00
+cache_write = 12.50       # 5-minute TTL
+cache_write_1h = 20.00
+cache_read = 0.25         # 0.025x input on this model
+batch_discount = 0.5      # batch: $5 in / $25 out
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Top model. Cache reads are 0.025x input, cheaper than the usual 0.1x. 1M context at standard price."
+
+[llm.anthropic.claude-mythos-5-1]
+input = 10.00
+output = 50.00
+cache_write = 12.50
+cache_write_1h = 20.00
+cache_read = 0.25
+batch_discount = 0.5
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Limited availability (see support.claude.com/en/articles/14604842). Priced the same as Fable 5.1."
+
+[llm.anthropic.claude-fable-5]
+input = 10.00
+output = 50.00
+cache_write = 12.50
+cache_write_1h = 20.00
+cache_read = 1.00
+batch_discount = 0.5
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Previous Fable. Standard 0.1x cache read multiplier."
+
+[llm.anthropic.claude-mythos-5]
+input = 10.00
+output = 50.00
+cache_write = 12.50
+cache_write_1h = 20.00
+cache_read = 1.00
+batch_discount = 0.5
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Limited availability."
+
+[llm.anthropic.claude-opus-5-5]
+input = 4.00
+output = 20.00
+cache_write = 5.00
+cache_write_1h = 8.00
+cache_read = 0.20         # 0.05x input
+batch_discount = 0.5      # batch: $2 in / $10 out
+fast_mode_input = 8.00
+fast_mode_output = 40.00
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Cheaper than Opus 5 / 4.x ($5/$25). Cache reads 0.05x input. Fast mode is 2x and not available on Batch."
+
+[llm.anthropic.claude-opus-5]
+input = 5.00
+output = 25.00
+cache_write = 6.25
+cache_write_1h = 10.00
+cache_read = 0.50
+batch_discount = 0.5
+fast_mode_input = 10.00
+fast_mode_output = 50.00
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Opus 4.8 has the same prices, including fast mode."
+
+[llm.anthropic.claude-opus-4-8]
+input = 5.00
+output = 25.00
+cache_write = 6.25
+cache_write_1h = 10.00
+cache_read = 0.50
+batch_discount = 0.5
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Opus 4.7, 4.6 and 4.5 are listed at identical prices."
+
+[llm.anthropic.claude-opus-4-1]
+input = 15.00
+output = 75.00
+cache_write = 18.75
+cache_write_1h = 30.00
+cache_read = 1.50
+batch_discount = 0.5
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Retired on the Claude API; still on Bedrock and Google Cloud. Opus 4 is the same price and retired except on Google Cloud."
+
+[llm.anthropic.claude-sonnet-5-5]
+input = 2.00
+output = 10.00
+cache_write = 2.50
+cache_write_1h = 4.00
+cache_read = 0.10         # 0.05x input
+batch_discount = 0.5      # batch: $1 in / $5 out
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Not $3/$15: the 4.x Sonnet price no longer applies to current Sonnets. Cache reads 0.05x input."
+
+[llm.anthropic.claude-sonnet-5]
+input = 2.00
+output = 10.00
+cache_write = 2.50
+cache_write_1h = 4.00
+cache_read = 0.20
+batch_discount = 0.5
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Launched at introductory $2/$10 through 2026-08-31. That is now the standard price; the planned rise to $3/$15 on 2026-09-01 was cancelled."
+
+[llm.anthropic.claude-sonnet-4-6]
+input = 3.00
+output = 15.00
+cache_write = 3.75
+cache_write_1h = 6.00
+cache_read = 0.30
+batch_discount = 0.5
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Sonnet 4.5 (deprecated) has the same price. Sonnet 4 is retired except on Bedrock and Google Cloud."
+
+[llm.anthropic.claude-haiku-5-5]
+input = 0.10
+output = 0.50
+cache_write = 0.125
+cache_write_1h = 0.20
+cache_read = 0.01
+batch_discount = 0.5      # batch: $0.05 in / $0.25 out
+long_context_threshold_tokens = 100000
+long_context_input = 0.50
+long_context_output = 2.50
+long_context_cache_write = 0.625
+long_context_cache_write_1h = 1.00
+long_context_cache_read = 0.05
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "The only current Claude model with a long-context tier. A prompt over 100K tokens (cache reads and writes count toward the threshold) pays 5x on the whole request. Batch long-context: $0.25 in / $1.25 out."
+
+[llm.anthropic.claude-haiku-4-5]
+input = 1.00
+output = 5.00
+cache_write = 1.25
+cache_write_1h = 2.00
+cache_read = 0.10
+batch_discount = 0.5
+source = "https://platform.claude.com/docs/en/about-claude/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Haiku 3.5 ($0.80/$4) is retired except on Google Cloud."
+
+
+[llm.openai.gpt-6-astra]
+input = 10.00
+output = 50.00
+cache_write = 12.50       # 30-minute write
+cache_write_12h = 25.00
+cache_read = 1.00
+batch_discount = 0.5      # batch: $5 in / $0.50 cached / $25 out
+long_context_threshold_tokens = 272000
+long_context_input = 20.00
+long_context_output = 75.00
+long_context_cache_read = 2.00
+long_context_cache_write = 25.00
+long_context_cache_write_12h = 50.00
+source = "https://developers.openai.com/api/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Flagship (most expensive) GPT-6 text model. The page does not label any model 'recommended'. OpenAI now names tiers astra / sol / terra / luna instead of mini / nano."
+
+[llm.openai.gpt-6-1-sol]
+input = 2.00
+output = 10.00
+cache_write = 2.50
+cache_write_12h = 5.00
+cache_read = 0.10
+batch_discount = 0.5
+long_context_threshold_tokens = 272000
+long_context_input = 4.00
+long_context_output = 15.00
+long_context_cache_read = 0.20
+long_context_cache_write = 5.00
+long_context_cache_write_12h = 10.00
+source = "https://developers.openai.com/api/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Mid-large tier. gpt-6-sol (older) is $2 / $0.20 cached / $10. gpt-5.6-sol is $4/$20, on promotional pricing 'at least through November 21, 2026'."
+
+[llm.openai.gpt-6-1-terra]
+input = 1.00
+output = 5.00
+cache_write = 1.25
+cache_write_12h = 2.50
+cache_read = 0.05
+batch_discount = 0.5
+long_context_threshold_tokens = 272000
+long_context_input = 2.00
+long_context_output = 7.50
+long_context_cache_read = 0.10
+long_context_cache_write = 2.50
+long_context_cache_write_12h = 5.00
+source = "https://developers.openai.com/api/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Mid tier, the closest current equivalent of a 'mini'. The mini/nano mapping is my reading; OpenAI does not state it."
+
+[llm.openai.gpt-6-luna]
+input = 0.10
+output = 0.50
+cache_write = 0.125
+cache_write_12h = 0.25
+cache_read = 0.01
+batch_discount = 0.5
+long_context_threshold_tokens = 272000
+long_context_input = 0.20
+long_context_output = 0.75
+long_context_cache_read = 0.02
+long_context_cache_write = 0.25
+long_context_cache_write_12h = 0.50
+source = "https://developers.openai.com/api/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Smallest current tier, the closest equivalent of a 'nano'. No gpt-6.1-luna is listed."
+
+[llm.openai.gpt-5-4-mini]
+input = 0.75
+output = 4.50
+cache_write = 0.0         # no cache-write charge listed ("-")
+cache_read = 0.075
+batch_discount = 0.5
+source = "https://developers.openai.com/api/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Newest model still named 'mini'. No long-context tier listed. gpt-5-mini is $0.25 / $0.025 / $2.00."
+
+[llm.openai.gpt-5-4-nano]
+input = 0.20
+output = 1.25
+cache_write = 0.0
+cache_read = 0.02
+batch_discount = 0.5
+source = "https://developers.openai.com/api/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Newest model still named 'nano'. gpt-5-nano is $0.05 / $0.005 / $0.40."
+
+[llm.openai.gpt-realtime-2-1]
+audio_input = 32.00
+audio_cached_input = 0.40
+audio_output = 64.00
+text_input = 4.00
+text_cached_input = 0.40
+text_output = 24.00
+unit = "USD per 1M audio or text tokens"
+source = "https://developers.openai.com/api/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Current speech-to-speech model. gpt-realtime-2, gpt-realtime-1.5 and gpt-realtime have the same audio prices. No cache-write column."
+
+[llm.openai.gpt-realtime-2-1-mini]
+audio_input = 10.00
+audio_cached_input = 0.30
+audio_output = 20.00
+unit = "USD per 1M audio tokens"
+source = "https://developers.openai.com/api/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "gpt-realtime-mini has the same audio prices. Text-token prices for the mini were not extracted."
+
+
+[llm.google.gemini-4-argon]
+input = 2.00
+output = 10.00
+cache_read = 0.10         # context-caching price
+cache_storage_per_mtok_hour = 0.0
+batch_discount = 0.5
+price_from_2026_12_01 = { input = 4.00, output = 20.00, cache_read = 0.20 }
+source = "https://aistudio.google.com/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "'Our flagship reasoning model'; replaces Pro at the top of the lineup. Prices DOUBLE on 2026-12-01. Implicit caching only (no explicit caches, so no storage charge). No context-length tier listed. Not on the free tier."
+
+[llm.google.gemini-3-1-pro-preview]
+input = 2.00
+output = 12.00
+cache_read = 0.20
+cache_storage_per_mtok_hour = 4.50
+batch_discount = 0.5
+long_context_threshold_tokens = 200000
+long_context_input = 4.00
+long_context_output = 18.00
+long_context_cache_read = 0.40
+source = "https://aistudio.google.com/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "The only current 'Pro' and still a preview. gemini-2.5-pro ($1.25/$10) is deprecated and from 2026-12-01 its requests route to gemini-3.8-flash."
+
+[llm.google.gemini-3-8-flash]
+input = 0.75
+output = 3.75
+cache_read = 0.075
+cache_storage_per_mtok_hour = 0.50
+batch_discount = 0.5
+price_from_2027_01_01 = { input = 1.50, output = 7.50, cache_read = 0.15, cache_storage_per_mtok_hour = 1.00 }
+source = "https://aistudio.google.com/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Current Flash. Prices shown run through 2026-12-31 and DOUBLE on 2027-01-01. gemini-3.6-flash (previous generation) has the same prices. gemini-2.5-flash is deprecated and routes to gemini-3.5-flash-lite from 2026-12-01."
+
+[llm.google.gemini-3-5-flash-lite]
+input = 0.30
+output = 2.50
+cache_read = 0.03
+cache_storage_per_mtok_hour = 1.00
+batch_discount = 0.5
+source = "https://aistudio.google.com/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Newest Flash-Lite, priced like the old gemini-2.5-flash."
+
+[llm.google.gemini-3-1-flash-lite]
+input = 0.25
+output = 1.50
+cache_read = 0.025
+cache_storage_per_mtok_hour = 1.00
+batch_discount = 0.5
+source = "https://aistudio.google.com/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Text/image/video prices. Audio is $0.50 input and $0.05 caching. gemini-2.5-flash-lite is still listed at $0.10/$0.40, cache $0.01."
+
+
+[embed.openai.text-embedding-3-small]
+input = 0.02
+source = "https://developers.openai.com/api/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "The page does not list a batch price for embeddings."
+
+[embed.openai.text-embedding-3-large]
+input = 0.13
+source = "https://developers.openai.com/api/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "The page does not list a batch price for embeddings."
+
+[embed.voyage.voyage-4-large]
+input = 0.12
+batch_discount = 0.33
+source = "https://docs.voyageai.com/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "First 200M tokens free per account (free tokens do not apply to Batch). voyage-context-4 and voyage-code-4 are also $0.12."
+
+[embed.voyage.voyage-4]
+input = 0.06
+batch_discount = 0.33
+source = "https://docs.voyageai.com/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "200M free tokens."
+
+[embed.voyage.voyage-4-lite]
+input = 0.02
+batch_discount = 0.33
+source = "https://docs.voyageai.com/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "200M free tokens."
+
+[rerank.voyage.rerank-3]
+input = 0.05
+source = "https://docs.voyageai.com/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Per 1M tokens. 200M free tokens. Model name as reported by the fetcher; confirm the exact id in the Voyage docs."
+
+[rerank.voyage.rerank-3-lite]
+input = 0.02
+source = "https://docs.voyageai.com/docs/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Per 1M tokens. 200M free tokens."
+
+[embed.cohere.embed-5-pro]
+input = 0.12
+source = "https://cohere.com/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Read from the price data embedded in the page source; the rendered text shows only Model Vault prices. Model Vault dedicated instance: $3/hr (Small) or $5/hr (Medium)."
+
+[embed.cohere.embed-5-fast]
+input = 0.08
+source = "https://cohere.com/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Read from the page's embedded price data."
+
+[rerank.cohere.rerank-5-pro]
+input = 0.05
+source = "https://cohere.com/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Rerank 5 is billed PER 1M TOKENS, not per search. Rerank 4 was per 1K searches (one search = 1 query + up to 100 docs). Model Vault: $4/hr Medium."
+
+[rerank.cohere.rerank-5-fast]
+input = 0.02
+source = "https://cohere.com/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Per 1M tokens."
+
+
+[vector.pinecone.serverless-standard]
+storage_gb_month = 0.33
+read_units_per_million_low = 16.00
+read_units_per_million_high = 18.00
+write_units_per_million_low = 4.00
+write_units_per_million_high = 4.50
+minimum_monthly = 50.00
+unit = "USD; read and write units per 1M; the range varies by cloud and region"
+source = "https://www.pinecone.io/pricing/"
+checked = "2026-11-03"
+verified = true
+notes = "The page gives a range, not a per-region figure. Hosted inference: llama-text-embed-v2 $0.16/1M tokens, multilingual-e5-large $0.08/1M, pinecone-rerank-v0 $2 per 1K requests."
+
+[vector.pinecone.serverless-enterprise]
+storage_gb_month = 0.33
+read_units_per_million_low = 24.00
+read_units_per_million_high = 27.00
+write_units_per_million_low = 6.00
+write_units_per_million_high = 6.75
+minimum_monthly = 500.00
+unit = "USD; read and write units per 1M"
+source = "https://www.pinecone.io/pricing/"
+checked = "2026-11-03"
+verified = true
+notes = ""
+
+[vector.turbopuffer.launch]
+storage_indexed_gb_month = 0.33
+storage_unindexed_gb_month = 0.165
+writes_per_gb = 2.00
+data_queried_per_pb = 1.00
+data_returned_per_gb = 0.05
+minimum_monthly = 16.00
+unit = "USD, decimal units (1 GB = 1e9 logical bytes)"
+source = "https://turbopuffer.com/pricing.md"
+checked = "2026-11-03"
+verified = true
+notes = "Scale plan has the same rates with a $256/month minimum. Each query is billed for at least 1.28 GB queried, with an 80% marginal discount for 32 to 128 GB and 96% above 128 GB. Writes have a 10 KB minimum and up to 50% batch discount."
+
+[vector.turbopuffer.enterprise]
+storage_indexed_gb_month = 0.33
+storage_unindexed_gb_month = 0.165
+writes_per_gb = 2.70
+data_queried_per_pb = 1.35
+data_returned_per_gb = 0.0675
+minimum_monthly = 4096.00
+unit = "USD, decimal units"
+source = "https://turbopuffer.com/pricing.md"
+checked = "2026-11-03"
+verified = true
+notes = "Minimum is 'at least $4,096/month'. Usage rates are 35% above Launch/Scale, except storage."
+
+[vector.aws.rds-postgres-db-r6g-xlarge]
+hourly = 0.450
+hourly_multi_az = 0.899
+vcpu = 4
+memory_gib = 32
+gp3_storage_gb_month = 0.115
+gp3_storage_gb_month_multi_az = 0.230
+unit = "USD per instance-hour; storage per GB-month"
+region = "us-east-1"
+source = "https://aws.amazon.com/rds/postgresql/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/rds/USD/current/rds-postgresql-ondemand.json"
+checked = "2026-11-03"
+verified = true
+notes = "On-demand, Single-AZ unless marked. Read from AWS's own price feed (published 2026-10-29) that backs the pricing page, because the page loads its tables with JavaScript. db.r7g.xlarge and db.r8g.xlarge are $0.478 Single-AZ / $0.956 Multi-AZ."
+
+
+[voice.stt.deepgram.nova-3-streaming]
+price = 0.0077
+unit = "USD per audio minute, pay-as-you-go"
+source = "https://deepgram.com/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Nova-3 monolingual. Multilingual streaming is $0.0092/min. Pre-recorded: $0.0043 mono, $0.0052 multi. No Nova-4 listed. Flux STT (turn-taking model) streaming: $0.0077 English, $0.0078 multilingual."
+
+[voice.stt.assemblyai.universal-streaming]
+price = 0.15
+unit = "USD per session hour"
+source = "https://www.assemblyai.com/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "English and multilingual are the same price. Billed on WebSocket open time, so idle time counts. Universal-3.6 Pro Realtime is $0.45/hr. Streaming diarization adds $0.12/hr."
+
+[voice.stt.elevenlabs.scribe-v2-realtime]
+price = 0.39
+unit = "USD per hour"
+source = "https://elevenlabs.io/pricing/api"
+checked = "2026-11-03"
+verified = true
+notes = ""
+
+[voice.tts.elevenlabs.flash-turbo]
+price = 0.04
+unit = "USD per 1K characters (API)"
+source = "https://elevenlabs.io/pricing/api"
+checked = "2026-11-03"
+verified = true
+notes = "Same rate on every tier; plans only change how many characters are included (for example Business $990/mo includes 24.75M Flash characters). Multilingual v2 and v3 are $0.08 per 1K."
+
+[voice.tts.cartesia.sonic-scale]
+price = 0.0374
+overage_per_1k_chars = 0.038
+unit = "USD per 1K characters (1 credit = 1 character), Scale plan $299/mo for 8M credits"
+source = "https://cartesia.ai/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "About $0.028 per minute at 750 credits/min. The page says a minute is about 750 to 800 credits. Startup $49/1.25M ($0.0392 effective, $0.045 overage). Pro $5/100K ($0.05, $0.065 overage). Ink STT: 3 credits/sec, page says $0.39/hr on Scale."
+
+[voice.tts.deepgram.aura-2]
+price = 0.030
+unit = "USD per 1K characters, pay-as-you-go"
+source = "https://deepgram.com/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Not requested; included for comparison. Flux TTS $0.045, Aura-1 $0.015. Deepgram Voice Agent API: $0.075/min standard."
+
+[telephony.twilio.us]
+inbound_local = 0.0085
+inbound_toll_free = 0.0220
+outbound = 0.0140
+sip_or_app = 0.0040
+local_number_monthly = 1.15
+toll_free_number_monthly = 2.15
+unit = "USD per minute; numbers per month"
+source = "https://www.twilio.com/en-us/voice/pricing/us"
+checked = "2026-11-03"
+verified = true
+notes = "Outbound covers US and Canada (Alaska is $0.0945). Confirmed against Twilio's price CSVs (OutboundVoicePricing.csv, SiteNumbersPricing.csv). Emergency calling adds $0.75/mo per number."
+
+[telephony.twilio.media-streams]
+price = 0.0044
+unit = "USD per minute, on top of the call leg"
+source = "https://www.twilio.com/en-us/voice/pricing/us"
+checked = "2026-11-03"
+verified = true
+notes = "Media Streams is charged separately from the voice minute."
+
+[telephony.twilio.india]
+outbound_landline = 0.0699
+outbound_mobile = 0.0496
+sip_or_app = 0.0040
+inbound_local = 0.0       # unknown
+unit = "USD per minute"
+source = "https://www.twilio.com/en-us/voice/pricing/in"
+checked = "2026-11-03"
+verified = false
+notes = "Outbound prices are confirmed (page and OutboundVoicePricing.csv). Inbound PSTN to an Indian Twilio number is NOT confirmed: neither the page nor SiteNumbersPricing.csv lists India numbers, so Indian numbers are not sold self-serve. For India inbound in the book, plan on a local carrier or SIP trunk, or ask Twilio sales."
+
+
+[gpu.aws.p5-48xlarge]
+gpus = 8
+gpu = "H100"
+hourly = 55.04
+per_gpu_hourly = 6.88
+ec2_instance_savings_plan_1yr_no_upfront = 34.6752
+ec2_instance_savings_plan_1yr_all_upfront = 32.36352
+compute_savings_plan_1yr_no_upfront = 43.344
+ec2_instance_savings_plan_3yr_no_upfront = 23.77728
+region = "us-east-1"
+unit = "USD per instance-hour, Linux"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+savings_plan_source = "https://pricing.us-east-1.amazonaws.com/savingsPlan/v1.0/aws/AWSComputeSavingsPlan/20261029175641/us-east-1/index.json"
+checked = "2026-11-03"
+verified = true
+notes = "A 1-yr EC2 Instance Savings Plan with no upfront payment is 37% below on-demand. Savings-plan rates are effective hourly rates from the AWS Price List API. p5.4xlarge (1x H100) is $6.88/hr."
+
+[gpu.aws.p5e-48xlarge]
+gpus = 8
+gpu = "H200"
+hourly = 0.0
+region = "us-east-1"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+checked = "2026-11-03"
+verified = false
+notes = "No on-demand p5e.48xlarge price in the us-east-1 feed (p5e is mostly sold through Capacity Blocks). Use p5en."
+
+[gpu.aws.p5en-48xlarge]
+gpus = 8
+gpu = "H200"
+hourly = 63.296
+per_gpu_hourly = 7.912
+region = "us-east-1"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+checked = "2026-11-03"
+verified = true
+notes = ""
+
+[gpu.aws.p6-b200-48xlarge]
+gpus = 8
+gpu = "B200"
+hourly = 113.9328
+per_gpu_hourly = 14.2416
+region = "us-east-1"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+checked = "2026-11-03"
+verified = true
+notes = "Not requested; for comparison. p6-b300.48xlarge is $142.416/hr."
+
+[gpu.aws.g6e-xlarge]
+gpus = 1
+gpu = "L40S"
+hourly = 1.861
+region = "us-east-1"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+checked = "2026-11-03"
+verified = true
+notes = ""
+
+[gpu.aws.g6e-12xlarge]
+gpus = 4
+gpu = "L40S"
+hourly = 10.49264
+per_gpu_hourly = 2.62316
+region = "us-east-1"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+checked = "2026-11-03"
+verified = true
+notes = ""
+
+[gpu.aws.g5-xlarge]
+gpus = 1
+gpu = "A10G"
+hourly = 1.006
+region = "us-east-1"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+checked = "2026-11-03"
+verified = true
+notes = ""
+
+[gpu.aws.g6-xlarge]
+gpus = 1
+gpu = "L4"
+hourly = 0.8048
+region = "us-east-1"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+checked = "2026-11-03"
+verified = true
+notes = ""
+
+[gpu.gcp.a3-highgpu-8g]
+gpus = 8
+gpu = "H100"
+hourly = 88.49
+per_gpu_hourly = 11.06
+spot = 52.700460712
+cud_1yr = 61.383674231
+cud_3yr = 38.864383195
+dws_flex_start = 38.32
+source = "https://cloud.google.com/products/compute/pricing/accelerator-optimized"
+checked = "2026-11-03"
+verified = true
+notes = "Read from the page HTML (the rendered text was truncated). The page did not state which region its default table is for; it is probably us-central1. A3 Mega (a3-megagpu-8g) is $93.40, A3 Ultra (a3-ultragpu-8g, 8x H200) $84.81. A4 (a4-highgpu-8g, 8x B200) has no on-demand price (N/A), only DWS Flex-start at $64.44."
+
+[gpu.lambda.h100-8x]
+gpus = 8
+gpu = "H100"
+per_gpu_hourly = 3.99
+hourly = 31.92
+source = "https://lambda.ai/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "8x HGX H100 SXM. Smaller nodes cost more per GPU: 4x $4.09, 2x $4.19, 1x $4.29. 1x H100 PCIe is $3.29."
+
+[gpu.lambda.h200]
+gpu = "H200"
+per_gpu_hourly = 0.0
+source = "https://lambda.ai/pricing"
+checked = "2026-11-03"
+verified = false
+notes = "No H200 on Lambda's on-demand price list."
+
+[gpu.lambda.b200-8x]
+gpus = 8
+gpu = "B200"
+per_gpu_hourly = 6.69
+hourly = 53.52
+source = "https://lambda.ai/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "1x B200 is $6.99. The fetcher matched tables to the 8x/4x/2x/1x tabs by order."
+
+[gpu.runpod.h100-sxm]
+gpus = 1
+gpu = "H100"
+per_gpu_hourly = 3.99
+community_cloud = 2.69
+source = "https://www.runpod.io/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Secure Cloud pod. H100 PCIe $2.89 (community $1.99); H100 NVL $3.19. Serverless H100 $5.39/hr. The Community Cloud figures come only from the page's structured data."
+
+[gpu.runpod.h200]
+gpus = 1
+gpu = "H200"
+per_gpu_hourly = 5.29
+community_cloud = 3.59
+source = "https://www.runpod.io/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Serverless H200 $6.99/hr."
+
+[gpu.runpod.b200]
+gpus = 1
+gpu = "B200"
+per_gpu_hourly = 7.99
+community_cloud = 5.98
+source = "https://www.runpod.io/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Serverless B200 $10.79/hr."
+
+[gpu.coreweave.hgx-h100]
+gpus = 8
+gpu = "H100"
+hourly = 49.24
+per_gpu_hourly = 6.155
+source = "https://www.coreweave.com/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "On-demand, same in North America and Europe."
+
+[gpu.coreweave.hgx-h200]
+gpus = 8
+gpu = "H200"
+hourly = 50.44
+per_gpu_hourly = 6.305
+source = "https://www.coreweave.com/pricing"
+checked = "2026-11-03"
+verified = true
+notes = ""
+
+[gpu.coreweave.hgx-b200]
+gpus = 8
+gpu = "B200"
+hourly = 68.80
+per_gpu_hourly = 8.60
+source = "https://www.coreweave.com/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "GB200 NVL72 is $42.00 per 4-GPU instance ($10.50/GPU)."
+
+
+[hosted.together.llama-3-8b-instruct-lite]
+input = 0.14
+output = 0.14
+source = "https://www.together.ai/pricing"
+checked = "2026-11-03"
+verified = false
+notes = "Listed on the pricing page but NOT on the serverless model list (docs.together.ai/docs/serverless-models), so it may not be callable. Together has no Llama 70B-class serverless model; Llama 3.3 70B appears only under fine-tuning."
+
+[hosted.together.qwen3-5-9b]
+input = 0.17
+output = 0.25
+source = "https://www.together.ai/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "8B-class. Model string Qwen/Qwen3.5-9B. Qwen2.5 7B Instruct Turbo is $0.30/$0.30."
+
+[hosted.together.qwen3-8-flash]
+input = 0.15
+output = 0.47
+source = "https://www.together.ai/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Qwen3.7-Plus $0.32/$1.28. Qwen3.6-Plus $0.50/$3.00. Qwen3 235B A22B Instruct 2507 FP8 Throughput $0.20/$0.60."
+
+[hosted.together.qwen3-7-max]
+input = 1.50
+output = 4.50
+cache_read = 0.30
+source = "https://www.together.ai/pricing"
+checked = "2026-11-03"
+verified = false
+notes = "The two Together pages disagree: the pricing page says $1.50/$4.50, the serverless-models page says $2.50/$7.50."
+
+[hosted.together.deepseek-v4-1-flash]
+input = 0.30
+output = 1.20
+cache_read = 0.006
+source = "https://www.together.ai/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Model string deepseek-ai/DeepSeek-V4.1-Flash. The pricing page also has a Batch API table, not extracted."
+
+[hosted.together.deepseek-v4-pro-0813]
+input = 1.32
+output = 3.96
+cache_read = 0.13
+source = "https://www.together.ai/pricing"
+checked = "2026-11-03"
+verified = true
+notes = ""
+
+[hosted.fireworks.deepseek-v4-1-flash]
+input = 0.30
+output = 1.20
+cache_read = 0.006
+batch_discount = 0.5
+source = "https://docs.fireworks.ai/serverless/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "US-hosted variant is $0.45/$1.80. Priority tier is 1.25x."
+
+[hosted.fireworks.qwen-3-8-max]
+input = 2.00
+output = 6.00
+cache_read = 0.25
+batch_discount = 0.5
+source = "https://docs.fireworks.ai/serverless/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Matches fireworks.ai/pricing."
+
+[hosted.fireworks.gpt-oss-120b]
+input = 0.15
+output = 0.60
+cache_read = 0.015
+batch_discount = 0.5
+source = "https://docs.fireworks.ai/serverless/pricing"
+checked = "2026-11-03"
+verified = true
+notes = "Not Llama/Qwen/DeepSeek, but it is now the default 70B-to-120B-class open model on Fireworks and Groq."
+
+[hosted.fireworks.size-tier-4b-16b]
+input = 0.20
+output = 0.20
+batch_discount = 0.5
+source = "https://docs.fireworks.ai/serverless/pricing"
+checked = "2026-11-03"
+verified = false
+notes = "Tier price for 8B-class models without their own listing. The tier price itself is confirmed, but whether any Llama 8B is serverless is NOT: the llama-v3p1-8b-instruct model page says serverless is 'Not Supported'."
+
+[hosted.fireworks.size-tier-over-16b]
+input = 0.90
+output = 0.90
+batch_discount = 0.5
+source = "https://docs.fireworks.ai/serverless/pricing"
+checked = "2026-11-03"
+verified = false
+notes = "Tier price for 70B-class dense models; no Llama 70B appears on the serverless list."
+
+[hosted.groq.gpt-oss-120b]
+input = 0.15
+output = 0.60
+source = "https://console.groq.com/docs/models"
+checked = "2026-11-03"
+verified = true
+notes = "groq.com/pricing rendered no prices; these come from the models page. Groq names it as the replacement for llama-3.3-70b-versatile."
+
+[hosted.groq.gpt-oss-20b]
+input = 0.075
+output = 0.30
+source = "https://console.groq.com/docs/models"
+checked = "2026-11-03"
+verified = true
+notes = "Groq names it as the replacement for llama-3.1-8b-instant."
+
+[hosted.groq.qwen3-8-27b]
+input = 0.80
+output = 4.00
+source = "https://console.groq.com/docs/models"
+checked = "2026-11-03"
+verified = true
+notes = "Preview model: 'for evaluation purposes only'. Replaced qwen3.6-27b, shut down 2026-09-14."
+
+[hosted.groq.llama-3-3-70b-versatile]
+input = 0.0
+output = 0.0
+source = "https://console.groq.com/docs/deprecations"
+checked = "2026-11-03"
+verified = false
+notes = "No public price. Shut down for free and developer tiers on 2026-08-16; now Enterprise/contact sales only. llama-3.1-8b-instant has the same status. Groq lists no DeepSeek model."
+
+
+
+[infra.aws.rds-postgres.db-t4g-medium]
+hourly = 0.065
+hourly_multi_az = 0.129
+region = "us-east-1"
+unit = "USD per instance-hour"
+source = "https://aws.amazon.com/rds/postgresql/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/rds/USD/current/rds-postgresql-ondemand.json"
+checked = "2026-11-03"
+verified = true
+notes = "Feed published 2026-10-29. Burstable: CPU credits beyond the baseline cost $0.075 per vCPU-hour."
+
+[infra.aws.rds-postgres.db-r6g-large]
+hourly = 0.225
+hourly_multi_az = 0.450
+region = "us-east-1"
+unit = "USD per instance-hour"
+source = "https://aws.amazon.com/rds/postgresql/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/rds/USD/current/rds-postgresql-ondemand.json"
+checked = "2026-11-03"
+verified = true
+notes = "Feed published 2026-10-29."
+
+[infra.aws.rds-postgres.db-r6g-2xlarge]
+hourly = 0.899
+hourly_multi_az = 1.798
+region = "us-east-1"
+unit = "USD per instance-hour"
+source = "https://aws.amazon.com/rds/postgresql/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/rds/USD/current/rds-postgresql-ondemand.json"
+checked = "2026-11-03"
+verified = true
+notes = "Feed published 2026-10-29."
+
+[infra.aws.rds-postgres.db-t4g-medium-ap-south-1]
+hourly = 0.084
+hourly_multi_az = 0.167
+region = "ap-south-1"
+unit = "USD per instance-hour"
+source = "https://aws.amazon.com/rds/postgresql/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/rds/USD/current/rds-postgresql-ondemand.json"
+checked = "2026-11-03"
+verified = true
+notes = "Mumbai. Feed published 2026-10-29."
+
+[infra.aws.rds-postgres.db-r6g-large-ap-south-1]
+hourly = 0.256
+hourly_multi_az = 0.513
+region = "ap-south-1"
+unit = "USD per instance-hour"
+source = "https://aws.amazon.com/rds/postgresql/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/rds/USD/current/rds-postgresql-ondemand.json"
+checked = "2026-11-03"
+verified = true
+notes = "Mumbai."
+
+[infra.aws.rds-postgres.db-r6g-2xlarge-ap-south-1]
+hourly = 1.025
+hourly_multi_az = 2.050
+region = "ap-south-1"
+unit = "USD per instance-hour"
+source = "https://aws.amazon.com/rds/postgresql/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/rds/USD/current/rds-postgresql-ondemand.json"
+checked = "2026-11-03"
+verified = true
+notes = "Mumbai."
+
+
+[infra.aws.fargate.linux-x86]
+vcpu_hourly = 0.04048
+gb_hourly = 0.004445
+ephemeral_storage_gb_hourly = 0.000111
+region = "us-east-1"
+unit = "USD per vCPU-hour and per GB-hour"
+source = "https://aws.amazon.com/fargate/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ecs/USD/current/ecs.json"
+checked = "2026-11-03"
+verified = true
+notes = "Feed published 2026-10-19. Ephemeral storage is charged only above the 20 GB included. ARM (Graviton) is $0.03238 per vCPU-hour and $0.00356 per GB-hour."
+
+[infra.aws.fargate.linux-x86-ap-south-1]
+vcpu_hourly = 0.04256
+gb_hourly = 0.004655
+ephemeral_storage_gb_hourly = 0.000127
+region = "ap-south-1"
+unit = "USD per vCPU-hour and per GB-hour"
+source = "https://aws.amazon.com/fargate/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ecs/USD/current/ecs.json"
+checked = "2026-11-03"
+verified = true
+notes = "Mumbai. ARM is $0.02383 per vCPU-hour and $0.00261 per GB-hour, cheaper than ARM in us-east-1."
+
+
+[infra.aws.s3.standard]
+storage_gb_month_first_50tb = 0.023
+storage_gb_month_next_450tb = 0.022
+storage_gb_month_over_500tb = 0.021
+put_per_1000 = 0.005
+get_per_1000 = 0.0004
+region = "us-east-1"
+unit = "USD per GB-month; requests per 1,000"
+source = "https://aws.amazon.com/s3/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/s3/USD/current/s3.json"
+checked = "2026-11-03"
+verified = true
+notes = "Feed published 2026-10-15. PUT means PUT, COPY, POST and LIST ($0.000005 each). GET means GET and all other requests ($0.0000004 each)."
+
+
+[infra.aws.eks.cluster]
+hourly = 0.10
+hourly_extended_support = 0.60
+region = "us-east-1"
+unit = "USD per cluster-hour"
+source = "https://aws.amazon.com/eks/pricing/"
+checked = "2026-11-03"
+verified = true
+notes = "Standard support. Extended support is the $0.10 plus $0.50, so $0.60. The price feed eks.json (published 2026-10-27) agrees."
+
+
+[gpu.aws.g6e-xlarge-ap-south-1]
+gpus = 1
+gpu = "L40S"
+hourly = 2.235
+region = "ap-south-1"
+unit = "USD per instance-hour, Linux"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/Asia%20Pacific%20(Mumbai)/Linux/index.json"
+checked = "2026-11-03"
+verified = true
+notes = "Feed published 2026-10-29. 20% above us-east-1 ($1.861)."
+
+[gpu.aws.g6e-12xlarge-ap-south-1]
+gpus = 4
+gpu = "L40S"
+hourly = 12.60131
+per_gpu_hourly = 3.15033
+region = "ap-south-1"
+unit = "USD per instance-hour, Linux"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/Asia%20Pacific%20(Mumbai)/Linux/index.json"
+checked = "2026-11-03"
+verified = true
+notes = "us-east-1 is $10.49264."
+
+[gpu.aws.p5-48xlarge-ap-south-1]
+gpus = 8
+gpu = "H100"
+hourly = 66.048
+per_gpu_hourly = 8.256
+region = "ap-south-1"
+unit = "USD per instance-hour, Linux"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/Asia%20Pacific%20(Mumbai)/Linux/index.json"
+checked = "2026-11-03"
+verified = true
+notes = "On-demand in Mumbai, 20% above us-east-1 ($55.04). A list price does not guarantee capacity. p5en.48xlarge (8x H200) is $75.9552 in Mumbai."
+
+[infra.aws.ec2.c7i-2xlarge-ap-south-1]
+vcpu = 8
+memory_gib = 16
+hourly = 0.357
+region = "ap-south-1"
+unit = "USD per instance-hour, Linux"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/Asia%20Pacific%20(Mumbai)/Linux/index.json"
+checked = "2026-11-03"
+verified = true
+notes = "Same price as us-east-1. The feed entry is labelled Location 'Asia Pacific (Mumbai)'."
+
+[infra.aws.ec2.c7i-2xlarge]
+vcpu = 8
+memory_gib = 16
+hourly = 0.357
+region = "us-east-1"
+unit = "USD per instance-hour, Linux"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/ec2/USD/current/ec2-ondemand-without-sec-sel/US%20East%20(N.%20Virginia)/Linux/index.json"
+checked = "2026-11-03"
+verified = true
+notes = "CPU node for orchestration."
+
+
+[infra.aws.data-transfer-out.internet]
+per_gb_first_10tb = 0.09
+per_gb_next_40tb = 0.085
+per_gb_next_100tb = 0.07
+per_gb_over_150tb = 0.05
+region = "us-east-1"
+unit = "USD per GB"
+source = "https://aws.amazon.com/ec2/pricing/on-demand/#Data_Transfer"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/datatransfer/USD/current/datatransfer.json"
+checked = "2026-11-03"
+verified = true
+notes = "Feed published 2026-09-16. The feed labels the first tier 'Next 10 TB' because AWS gives the first 100 GB a month free across services. I did not confirm that free tier on the page itself."
+
+
+[infra.aws.elasticache.cache-r7g-large]
+hourly_valkey = 0.1752
+hourly_redis_oss = 0.219
+region = "us-east-1"
+unit = "USD per node-hour"
+source = "https://aws.amazon.com/elasticache/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/elasticache/USD/current/elasticache.json"
+checked = "2026-11-03"
+verified = true
+notes = "Feed published 2026-10-28. Self-designed node-based cluster. Valkey is 20% cheaper than Redis OSS on the same node. Memcached is $0.219. Serverless ElastiCache is priced differently and is not included."
+
+
+[llm.bedrock.claude-sonnet-5-5]
+input = 2.00
+output = 10.00
+cache_write = 2.50
+cache_write_1h = 4.00
+cache_read = 0.10
+geo_input = 2.20
+geo_output = 11.00
+geo_cache_write = 2.75
+geo_cache_write_1h = 4.40
+geo_cache_read = 0.11
+region = "us-east-1"
+source = "https://aws.amazon.com/bedrock/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/bedrockfoundationmodels/USD/current/bedrockfoundationmodels.json"
+checked = "2026-11-03"
+verified = true
+notes = "The base fields are the Global cross-region price; the geo_ fields are the Geo and in-region price. Same as the Claude API price. The page notes cache-read pricing was cut 50% on 2026-10-07. No batch price on Bedrock (N/A)."
+
+[llm.bedrock.claude-sonnet-5-5-ap-south-1]
+input = 2.00
+output = 10.00
+cache_write = 2.50
+cache_write_1h = 4.00
+cache_read = 0.10
+region = "ap-south-1"
+source = "https://aws.amazon.com/bedrock/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/bedrockfoundationmodels/USD/current/bedrockfoundationmodels.json"
+checked = "2026-11-03"
+verified = true
+notes = "Mumbai offers ONLY Global cross-region inference. There is no Geo or in-region price for Mumbai, so requests may be served outside India. That matters for data-residency designs. The Asia Pacific geo price is listed only for Sydney and Melbourne."
+
+[llm.bedrock.claude-haiku-5-5]
+input = 0.10
+output = 0.50
+cache_write = 0.125
+cache_write_1h = 0.20
+cache_read = 0.01
+long_context_input = 0.50
+long_context_output = 2.50
+long_context_cache_write = 0.625
+long_context_cache_write_1h = 1.00
+long_context_cache_read = 0.05
+geo_input = 0.11
+geo_output = 0.55
+geo_cache_write = 0.1375
+geo_cache_write_1h = 0.22
+geo_cache_read = 0.011
+geo_long_context_input = 0.55
+geo_long_context_output = 2.75
+region = "us-east-1"
+source = "https://aws.amazon.com/bedrock/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/bedrockfoundationmodels/USD/current/cHVibGljLzljYzM1NWVlLTRjNjYtNDk0OC04MTg0LWVjMDFkYjBlNGNmMy8yNg.json"
+checked = "2026-11-03"
+verified = true
+notes = "The base fields are the Global cross-region price; the geo_ fields are the Geo and in-region price. Bedrock lists 'Claude Haiku 5.5 - Long Context' as its own row. Geo long-context cache prices: 5m write $0.6875, 1h write $1.10, read $0.055. Haiku's prices come from separate feed files (two, one per table); the data_feed field names the Global one. No batch price on Bedrock."
+
+[llm.bedrock.claude-haiku-5-5-ap-south-1]
+input = 0.10
+output = 0.50
+cache_write = 0.125
+cache_write_1h = 0.20
+cache_read = 0.01
+long_context_input = 0.50
+long_context_output = 2.50
+region = "ap-south-1"
+source = "https://aws.amazon.com/bedrock/pricing/"
+data_feed = "https://b0.p.awsstatic.com/pricing/2.0/meteredUnitMaps/bedrockfoundationmodels/USD/current/cHVibGljLzljYzM1NWVlLTRjNjYtNDk0OC04MTg0LWVjMDFkYjBlNGNmMy8yNg.json"
+checked = "2026-11-03"
+verified = true
+notes = "Mumbai offers only Global cross-region inference. No Geo or in-region price is listed for Mumbai."

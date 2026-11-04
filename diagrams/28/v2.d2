@@ -1,0 +1,28 @@
+...@../_theme
+direction: down
+
+caller: Patient {class: actor}
+tel: Twilio number {class: ext}
+caller -> tel
+
+bot: Orchestrator, one session per call {
+  class: zone
+  ws: Media stream socket {class: svc}
+  vad: "Voice activity +\nturn detection" {class: [model; new]}
+  stt: Streaming STT {class: model}
+  ctl: "Turn controller\nbarge-in, truncation" {class: [svc; new]}
+  llm: Streaming LLM {class: model}
+  tts: Streaming TTS {class: model}
+  ws -> vad
+  ws -> stt
+  vad -> ctl: speech start, turn end {class: hot}
+  stt -> ctl: partial + final text
+  ctl -> llm: complete turn
+  llm -> tts
+  tts -> ws
+  ctl -> tts: stop on barge-in {class: hot}
+}
+tel <-> bot.ws
+dtmf: "Keypad digits for\nIDs and dates" {class: [svc; new]}
+tel -> dtmf: DTMF tones
+dtmf -> bot.ctl

@@ -1,0 +1,29 @@
+...@../_theme
+direction: down
+
+user: Employee {class: actor}
+slack: Slack {class: ext}
+user -> slack: "@askwiki ..."
+
+app: Answer service {
+  class: zone
+  bot: Slack event handler {class: [svc; new]}
+  api: Retrieve and answer {class: svc}
+  bot -> api
+}
+slack -> app.bot: event {class: [hot]}
+app.bot -> slack: answer + sources + feedback buttons {class: hot}
+
+db: Postgres + pgvector {class: store}
+llm: Answer model {class: model}
+app.api -> db
+app.api -> llm
+
+fb: Feedback + traces {class: [store; new]}
+review: Weekly review queue {class: [svc; new]}
+golden: Golden set {class: [store; new]}
+ci: Eval in CI {class: [svc; new]}
+app.bot -> fb: thumbs, trace id {class: async}
+fb -> review: sampled + all thumbs-down {class: async}
+review -> golden: failures become cases {class: async}
+golden -> ci {class: async}

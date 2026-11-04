@@ -1,0 +1,19 @@
+...@../_theme
+direction: down
+gw: "Inference gateway\nrouting, fallback" {class: svc}
+cluster: EKS GPU node group {
+  class: zone
+  n1: Node 1 {class: model}
+  n2: "Node 2, from 3x volume\ncapacity reservation" {class: [model; new]}
+  nvme: "Weights on local NVMe\nload in under a minute" {class: [store; new]}
+  ctl: "Health controller\ndrain on GPU errors" {class: [svc; new]}
+  ctl -> n1 {class: async}
+  ctl -> n2 {class: async}
+  nvme -> n1 {class: offline}
+}
+gw -> cluster.n1
+gw -> cluster.n2
+fb: "Bedrock fallback\napproved tenants only" {class: [ext; new]}
+gw -> fb: node down or overloaded {class: hot}
+s3: Weights in S3 {class: store}
+s3 -> cluster.nvme: prefetch at boot {class: offline}
