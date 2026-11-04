@@ -1,0 +1,19 @@
+...@../_theme
+direction: down
+
+agent: Support agent {class: actor}
+zd: Zendesk {class: ext}
+
+app: Assistant service {
+  class: zone
+  loop: "Loop: call model,\nrun tool_use blocks,\nrepeat until end_turn" {class: svc}
+  model: "Sonnet 5.5\n22 generated tools" {class: model}
+  loop <-> model: "messages, tools"
+}
+
+api: "Internal APIs\nservice admin token" {class: ext}
+
+agent -> app.loop: question on a ticket
+app.loop -> zd: read ticket
+app.loop -> api: "any call,\nraw JSON back"
+app.loop -> agent: answer

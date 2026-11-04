@@ -1,0 +1,28 @@
+...@../_theme
+direction: down
+
+agent: Support agent {class: actor}
+cust: "Customer's employees" {class: actor}
+
+app: Assistant service {
+  class: zone
+  loop: Loop {class: svc}
+  model: Sonnet 5.5 {class: model}
+  exec: Tool executor {class: svc}
+  prop: "Proposal: resolved\narguments, 30-min expiry" {class: [store; new]}
+  card: "Confirmation card\nin the console" {class: [svc; new]}
+  run: "On confirm: read stored\nproposal, re-check run,\nexecute with key from run" {class: [svc; new]}
+  loop <-> model
+  loop -> exec: tool_use
+  exec -> prop: write tool {class: new}
+  prop -> card {class: new}
+  card -> run: confirmed {class: new}
+}
+
+api: Internal APIs {class: ext}
+
+agent -> app.loop: question on a ticket
+app.exec -> api: read tools
+agent <-> app.card: "approve or\nreject" {class: new}
+app.run -> api: "write, once" {class: new}
+api -> cust: "payslips to\naddresses on file"

@@ -1,0 +1,24 @@
+...@../_theme
+direction: down
+
+agent: Support agent {class: actor}
+
+app: Assistant service {
+  class: zone
+  loop: Loop {class: svc}
+  model: "Sonnet 5.5\nstrict schemas, enums" {class: [model; new]}
+  exec: "Tool executor" {
+    class: zone
+    bind: "Bind customer\nfrom the open ticket" {class: [svc; new]}
+    check: "Check IDs belong\nto that customer" {class: [svc; new]}
+    bind -> check
+  }
+  loop <-> model
+  loop -> exec.bind: tool_use
+  exec.check -> loop: "result, or is_error\nnaming the field" {class: new}
+}
+
+api: "Internal APIs\nagent's own token" {class: [ext; new]}
+
+agent -> app.loop: question on a ticket
+app.exec.check -> api

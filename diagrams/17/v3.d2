@@ -1,0 +1,32 @@
+...@../_theme
+direction: down
+
+agent: Support agent {class: actor}
+
+app: Assistant service {
+  class: zone
+  budget: "Budget: 8 calls,\nthen answer from findings" {class: [svc; new]}
+  loop: Loop {class: svc}
+  model: "Sonnet 5.5\nAPI errors retried 20 s" {class: [model; new]}
+  exec: "Tool executor" {
+    class: zone
+    retry: "Retry reads in code,\ncircuit breaker per tool" {class: [svc; new]}
+    err: "Instructive is_error:\nwhat failed, what to do" {class: [svc; new]}
+    cap: "Cap result at\n1,500 tokens" {class: [svc; new]}
+    retry -> err
+    retry -> cap
+  }
+  budget -> loop
+  loop <-> model
+  loop -> exec.retry: tool_use
+  exec.err -> loop
+  exec.cap -> loop
+}
+
+api: Internal APIs {class: ext}
+
+agent -> app.budget: question on a ticket
+app.exec.retry -> api
+
+db: "Postgres\nloop state per step" {class: [store; new]}
+app.loop -> db {class: async}

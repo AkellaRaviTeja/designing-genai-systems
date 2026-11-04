@@ -36,7 +36,7 @@ cost constraints). Systems marked **written** are in this edition.
 
 | # | System | Level | The new idea it teaches |
 |---|---|---|---|
-| 17 | Tool-calling assistant | ★★ | Tool schemas, the token cost of tool definitions, error recovery |
+| 17 | [Tool-calling assistant](../systems/17-tool-calling-assistant.qmd) **written** | ★★ | Tool schemas, the token cost of tool definitions, error recovery |
 | 18 | Enterprise MCP platform | ★★★ | MCP servers and gateways, OAuth, tool discovery and search |
 | 19 | Support agent that issues refunds | ★★★ | Policy enforcement, human approval, idempotency, escalation |
 | 20 | Workflow automation with model steps | ★★★ | Durable execution, retries, human pauses; workflow against agent |

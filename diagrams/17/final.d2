@@ -1,0 +1,39 @@
+...@../_theme
+direction: down
+
+agent: "Support agent\nin the admin console" {class: actor}
+zd: Zendesk {class: ext}
+api: "Internal APIs\npayroll, filings, help centre" {class: ext}
+
+app: Assistant service {
+  class: zone
+  ctx: "Task context:\nticket, customer bound" {class: svc}
+  loop: "Loop with budget:\n8 calls, results capped" {class: svc}
+  model: "Sonnet 5.5\n9 strict tools, cached" {class: model}
+  exec: "Executor: validate,\nretry reads, is_error" {class: svc}
+  prop: "Proposals, resolved\nand expiring" {class: store}
+  conf: "Confirm and execute\nwith agent's token" {class: svc}
+  ctx -> loop
+  loop <-> model
+  loop -> exec
+  exec -> prop: writes
+  prop -> conf
+}
+
+db: "Postgres\nconversations, audit log" {class: store}
+
+ops: Quality loop {
+  class: zone
+  ts: "Task set: 150 tasks\nrecorded fixtures" {class: store}
+  ci: "Gate in CI:\ncalls, arguments, answers" {class: svc}
+  ts -> ci {class: async}
+}
+
+agent -> app.ctx: question on a ticket
+app.ctx -> zd: read ticket
+app.exec -> api: reads
+app.conf -> api: "confirmed writes"
+agent <-> app.conf: "confirmation card"
+app.loop -> agent: answer
+app.loop -> db: every call and tool {class: async}
+db -> ops.ts: "traces, rejected\nproposals" {class: async}
