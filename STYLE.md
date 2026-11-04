@@ -35,8 +35,17 @@ they are sceptical. Write for the one who will check your arithmetic.
      in chapter text: use `{{< var ... >}}` or a generated table, so `make costs` can refresh
      them.
   3. **A rule of thumb**, worded as one ("expect", "typically") with the reason it holds.
-- Worked scenarios are illustrative, and the text says so the first time ("in this worked
-  example"). Never present an invented measurement as a benchmark result.
+- Worked scenarios supply inputs (traffic, corpus size, staff counts, a latency target) and the
+  text labels them the first time ("in this worked example"). They never supply results.
+- **No invented results.** Nothing in the book was measured, so nothing is reported as if it
+  were: no evaluation scores, recall or hit rates, observed latencies, load-test outcomes,
+  speedups, efficiency factors, quality comparisons between models or vendors, or "X scored
+  within the noise of Y". Where a result decides a design step, write what to measure, how, and
+  the threshold that would justify the step, labelled as a target. A number that sizes or prices
+  something and is not arithmetic, a price or a datasheet figure is an assumption: label it,
+  and where a conclusion turns on it, show the break-even value instead of a guess.
+- Facts about products, papers and standards are checked against a source before they go in.
+  Anything that cannot be checked is left out or worded as something to confirm.
 - Round honestly. Two significant figures is usually enough. Show the unrounded inputs.
 - Money is USD. Token counts are written 2,400 or 2.4K; per-million prices are "$/M tokens".
 
@@ -51,7 +60,9 @@ checks them in this order:
 3. `## The numbers`: back of the envelope, arithmetic shown.
 4. `## Version 0`: the simplest thing that could work, with a diagram.
 5. One `## Where ... breaks` (or `break`) section per failure, each followed by the next `## Version N`.
-   Every break cites evidence: an eval result, a load test, a cost line or a latency budget.
+   Every break names the failure, why it happens, and how you would see it: the arithmetic or
+   cost line that shows it where one exists, otherwise the metric to watch and the threshold
+   (a target) that says it has broken. Never an invented measurement.
 6. `## The final design`: the full diagram and a component table.
 7. `## Deployment`
 8. `## Cost`: generated tables at three scales.
