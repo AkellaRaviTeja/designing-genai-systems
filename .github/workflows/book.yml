@@ -39,10 +39,16 @@ jobs:
       - name: Gates (lint, structure, stale costs, stale diagrams)
         run: make check
 
+      # One render for both formats: rendering a single format clears _book/
+      # first, so a separate typst render would leave only the PDF.
       - name: Render HTML and PDF
+        run: quarto render
+
+      - name: Check the site has a home page and the PDF
         run: |
-          quarto render --to html
-          quarto render --to typst
+          test -f _book/index.html
+          test -f _book/Designing-GenAI-Systems.pdf
+          echo "site: $(find _book -name '*.html' | wc -l) pages and the PDF"
 
       - uses: actions/upload-pages-artifact@v5
         if: github.event_name != 'pull_request'
