@@ -21,7 +21,7 @@ A token is the unit models read, write and bill. It is not a word and not a char
 | An image (Claude) | About width x height / 750 tokens, so about 1,600 for a 1092 x 1092 image | Images are cut into patches; each patch costs tokens |
 
 The Indic row matters more than any other in this table if you build for Indian users. A support
-bot answering in Hindi can cost two or three times what the English version costs, with no change
+bot answering in Hindi can cost two to four times what the English version costs, with no change
 in design. Tokenisers differ between vendors and generations, so measure: every major API has a
 token-counting endpoint. Never compare vendors on price per token alone; compare them on price per
 task, using the same inputs.

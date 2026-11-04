@@ -2,13 +2,13 @@
 direction: down
 
 tel: Twilio {class: ext}
-lb: "Media stream router\nsticky per call" {class: [svc; new]}
+lb: "Media stream router\nsticky, two or more" {class: [svc; new]}
 tel -> lb
 
 pool: Orchestrator pool, autoscaled on active calls {
   class: zone
-  o1: Node 1, 40 calls {class: svc}
-  o2: Node 2, 40 calls {class: svc}
+  o1: Node 1 {class: svc}
+  o2: Node 2 {class: svc}
   o3: Node N {class: [svc; new]}
 }
 lb -> pool.o1
@@ -27,7 +27,7 @@ vendors: Speech and model vendors {
 pool -> vendors
 
 rec: "Recordings + transcripts\nS3, 12 months" {class: [store; new]}
-batch: "Post-call summaries\nbatch API" {class: [model; new]}
+batch: "Post-call summaries\nafter the call" {class: [model; new]}
 qa: "QA review +\nsimulated-caller suite" {class: [svc; new]}
 pool -> rec {class: async}
 rec -> batch {class: offline}
