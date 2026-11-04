@@ -22,7 +22,7 @@ cost constraints). Systems marked **written** are in this edition.
 | # | System | Level | The new idea it teaches |
 |---|---|---|---|
 | 7 | [Simple RAG over a company wiki](../systems/07-simple-rag.qmd) **written** | ★★ | Chunking by structure, freshness, grounded answers, the quality loop |
-| 8 | Production RAG: hybrid search and reranking | ★★★ | Keyword plus vector search, rank fusion, cross-encoder reranking, query rewriting |
+| 8 | [Production RAG: hybrid search and reranking](../systems/08-production-rag.qmd) **written** | ★★★ | Keyword plus vector search, rank fusion, cross-encoder reranking, query rewriting |
 | 9 | Conversational RAG with follow-ups | ★★ | Query condensation, history compression, token growth per turn |
 | 10 | Multi-tenant RAG for a SaaS product | ★★★ | Tenant isolation, permission-aware retrieval, cost attribution per tenant |
 | 11 | Multimodal RAG over PDFs with tables and charts | ★★★ | Layout parsing, visual retrieval, table handling |

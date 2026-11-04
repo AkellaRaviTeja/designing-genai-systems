@@ -216,7 +216,7 @@ only indirectly relevant. Net: answers correct (counting a correct refusal as co
 That trade is worth making in this system, and the chapter's trade-offs table records it. The
 residual failures are the 10 exact-term misses (error codes, form numbers, product names) that
 dense embeddings blur. Fixing them needs keyword search alongside vector search, and that is where
-System 8 (see the [roadmap](../appendix/roadmap.qmd)) begins.
+[System 8](08-production-rag.qmd) begins.
 
 ## Where adoption breaks
 
@@ -346,7 +346,7 @@ not pad the prompt to qualify; at 450 tokens there is nothing worth saving.
 **<span class="ocode">O2</span> Retrieval budget.** Five chunks of 400 tokens is already lean.
 Measure whether three would do: if the hit rate at 3 is close to the hit rate at 5, it cuts input
 tokens by a third. Going the other way (retrieving more and reranking) is a quality decision that
-belongs to System 8.
+belongs to [System 8](08-production-rag.qmd).
 
 **<span class="ocode">O4</span> Output control.** Ask for at most four sentences plus citations.
 Output is about a third of the generation cost per query here, and short answers are better in
@@ -397,7 +397,7 @@ filters, permission sync lag and the cost of re-checking permissions are the sub
 
 **If exact terms matter more.** For IT error codes, part numbers and legal clause numbers, add
 keyword search (Postgres full-text search is enough at this size) and merge the two result lists
-with reciprocal rank fusion, then rerank. That is System 8.
+with reciprocal rank fusion, then rerank. That is [System 8](08-production-rag.qmd).
 
 **If the corpus were 50 pages.** About 80,000 tokens: put the whole thing in the prompt, cache it
 (<span class="ocode">O1</span>), and skip retrieval entirely. With caching, each question costs about a cent and retrieval failures disappear. Revisit when the corpus grows past a few hundred

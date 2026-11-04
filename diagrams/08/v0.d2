@@ -1,0 +1,28 @@
+...@../_theme
+direction: down
+
+ingest: Ingestion, every 15 min {
+  class: zone
+  src: "Confluence, SOP PDFs,\ncarrier manuals" {class: ext}
+  parse: Parse by heading + header {class: svc}
+  emb: Embed chunks {class: model}
+  src -> parse -> emb {class: offline}
+}
+
+db: "Postgres + pgvector\nchunks, vectors, metadata" {class: store}
+ingest.emb -> db {class: offline}
+
+user: Agent or hub staff {class: actor}
+query: Query path, System 7 as built {
+  class: zone
+  api: Answer service {class: svc}
+  qemb: Embed question {class: model}
+  llm: Grounded answer {class: model}
+  chk: Citation check {class: svc}
+  api -> qemb
+  api -> llm: question + 5 chunks
+  llm -> chk
+}
+user -> query.api: question
+query.api -> db: top 5 by cosine
+query.chk -> user: answer + sources

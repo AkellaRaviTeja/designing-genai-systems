@@ -1,0 +1,47 @@
+...@../_theme
+direction: down
+
+src: "Confluence, SOP PDFs,\ncarrier manuals" {class: ext}
+user: Agent or hub staff {class: actor}
+rrapi: Rerank API {class: ext}
+
+ingest: Ingestion, every 15 min {
+  class: zone
+  sync: Sync changed documents {class: svc}
+  parse: "Parse by heading,\nheading path header" {class: svc}
+  ids: Extract identifiers {class: svc}
+  emb: Embed {class: model}
+  sync -> parse -> ids -> emb {class: offline}
+}
+src -> ingest.sync {class: offline}
+
+db: "Postgres, Multi-AZ\nvector + tsvector + identifiers" {class: store}
+gloss: Ops glossary {class: store}
+ingest.emb -> db: one transaction {class: offline}
+
+app: Retrieval and answer service {
+  class: zone
+  api: Agent console + Slack {class: svc}
+  rw: Rewrite if no identifier {class: model}
+  hy: "Dense + keyword,\nfuse by rank" {class: svc}
+  rr: Rerank 30, threshold {class: model}
+  gen: Grounded answer {class: model}
+  chk: Citation check {class: svc}
+  api -> rw
+  api -> hy
+  rw -> hy
+  hy -> rr -> gen -> chk
+}
+user <-> app.api: "question, streamed\nanswer + sources"
+app.hy -> db
+app.rr -> rrapi
+gloss -> app.rw {class: offline}
+
+ops: Quality loop {
+  class: zone
+  tr: "Traces: candidates,\nranks, scores" {class: store}
+  gs: "Golden set by slice\nexact, how-to, vague, none" {class: store}
+  ci: Eval in CI {class: svc}
+  tr -> gs -> ci {class: async}
+}
+app.api -> ops.tr {class: async}

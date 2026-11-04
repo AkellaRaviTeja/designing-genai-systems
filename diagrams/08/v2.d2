@@ -1,0 +1,31 @@
+...@../_theme
+direction: down
+
+db: "Postgres\nvector + tsvector + identifiers" {class: store}
+user: Agent or hub staff {class: actor}
+cohere: Rerank API {class: ext}
+
+query: Query path {
+  class: zone
+  api: Answer service {class: svc}
+  dense: Dense top 50 {class: svc}
+  kw: Keyword top 50 {class: svc}
+  rrf: Fuse, keep 50 {class: svc}
+  rr: "Cross-encoder rerank\nquestion + each candidate" {class: [model; new]}
+  gate: "Top score below\nthreshold?" {class: [svc; new]}
+  llm: Grounded answer {class: model}
+  refuse: Refuse, link closest pages {class: svc}
+  api -> dense
+  api -> kw
+  dense -> rrf
+  kw -> rrf
+  rrf -> rr: 50 candidates
+  rr -> gate
+  gate -> llm: top 6 by score
+  gate -> refuse: yes {class: hot}
+}
+query.rr -> cohere {class: hot}
+user -> query.api: question
+query.dense -> db
+query.kw -> db
+query.llm -> user: answer + sources

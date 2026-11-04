@@ -14,7 +14,7 @@ Read it online at `https://akellaraviteja.github.io/designing-genai-systems/` on
 | Part | Chapters |
 |---|---|
 | Foundations | F1 The design method · F2 The numbers · F3 Choosing a model · F4 Evaluation as architecture · F5 The optimisation playbook (O1 to O20) · F6 Safety, privacy and observability |
-| Retrieval | 07 Simple RAG over a company wiki ★★ |
+| Retrieval | 07 Simple RAG over a company wiki ★★ · 08 Production RAG: hybrid search and reranking ★★★ |
 | Real-time and conversational | 28 Call-centre voice agent ★★★★ |
 | The model platform | 39 Self-hosted inference platform ★★★★ |
 | Appendices | The roadmap of all fifty systems · Prices |

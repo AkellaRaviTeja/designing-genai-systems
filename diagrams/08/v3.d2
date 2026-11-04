@@ -1,0 +1,25 @@
+...@../_theme
+direction: down
+
+db: "Postgres\nvector + tsvector + identifiers" {class: store}
+gloss: "Ops glossary\nPOD, RF gun, MC9300" {class: store}
+user: Agent or hub staff {class: actor}
+
+query: Query path {
+  class: zone
+  api: Answer service {class: svc}
+  rw: "Rewrite: keyword query +\nsearch query, glossary cached" {class: [model; new]}
+  ret: "Hybrid retrieval\nfor each query" {class: svc}
+  rrf: Fuse all lists, keep 50 {class: svc}
+  rr: Rerank {class: model}
+  llm: Grounded answer {class: model}
+  api -> rw: no identifier in question
+  api -> ret: original question
+  rw -> ret: rewritten queries
+  ret -> rrf -> rr
+  rr -> llm: top 6
+}
+gloss -> query.rw {class: offline}
+user -> query.api: question
+query.ret -> db
+query.llm -> user: answer + sources
