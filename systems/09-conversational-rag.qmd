@@ -498,7 +498,7 @@ identifiers forward ("and WMS-4013?" becomes a question that names WMS-4013).
 
 **If some pages were restricted.** History is the new leak: an answer built from a page the asker
 could read stays in the thread state, and must not reach a different person who mentions the bot in
-the same thread. Thread state belongs to the asker; that is part of System 10.
+the same thread. Thread state belongs to the asker; that is part of [System 10](10-multi-tenant-rag.qmd).
 
 **If questions came in Hindi.** The condenser must keep the asker's language or translate
 deliberately, the conversation set needs Hindi threads, and every token count above grows by two to

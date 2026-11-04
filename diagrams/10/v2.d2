@@ -1,0 +1,27 @@
+...@../_theme
+direction: down
+
+user: Member, guest or admin {class: actor}
+perm: "Lanternly app database\nusers, groups, pages" {class: store}
+
+app: Ask service {
+  class: zone
+  api: "Ask API" {class: svc}
+  pr: "Resolve principals:\nuser, groups, workspace" {class: [svc; new]}
+  tx: "SET LOCAL tenant\nand principals" {class: [svc; new]}
+  dense: Dense top 50 {class: svc}
+  kw: Keyword top 50 {class: svc}
+  rrf: Rank fusion {class: svc}
+  rr: Rerank 30 {class: ext}
+  api -> pr -> tx
+  tx -> dense
+  tx -> kw
+  dense -> rrf
+  kw -> rrf
+  rrf -> rr
+}
+db: "Chunks + page_acl readers[]\npolicy: tenant and page\nreaders overlap principals" {class: [store; new]}
+user -> app.api: question
+app.pr -> perm
+app.dense -> db
+app.kw -> db

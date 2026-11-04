@@ -1,0 +1,51 @@
+...@../_theme
+direction: down
+
+user: Members and guests of every tenant {class: actor}
+admin: Workspace admin {class: actor}
+
+appdb: "Lanternly app database\npages, users, groups,\npermissions, outbox" {class: store}
+
+sync: Ingestion and permission sync {
+  class: zone
+  ing: "Page edits:\nparse, chunk, embed" {class: svc}
+  acl: "Permission events:\nversioned page_acl" {class: svc}
+}
+admin -> appdb: edit, share, restrict
+appdb -> sync.ing {class: offline}
+appdb -> sync.acl {class: async}
+
+shards: Postgres shards, tenant placement table {
+  class: zone
+  pool: "Pooled partition\nsmall tenants, exact scan" {class: store}
+  ded: "Dedicated partitions\nlarge tenants, HNSW" {class: store}
+}
+sync.ing -> shards.pool {class: offline}
+sync.ing -> shards.ded {class: offline}
+sync.acl -> shards.ded {class: async}
+
+app: Ask service {
+  class: zone
+  lim: "Tenant rate limit\nand quota" {class: svc}
+  pr: "Principals,\nSET LOCAL tenant\nand principals" {class: svc}
+  cond: "Condense follow-ups\nHaiku 5.5" {class: model}
+  ret: "Dense + keyword\nunder row-level security,\nfusion" {class: svc}
+  chk: "Re-check fused pages" {class: svc}
+  rr: "Rerank 30\nCohere Rerank 5 Pro" {class: ext}
+  gen: "Grounded answer\nHaiku 5.5" {class: model}
+  lim -> pr -> cond -> ret -> chk -> rr -> gen
+}
+user <-> app.lim: "question, answer\nwith sources"
+app.pr -> appdb
+app.chk -> appdb
+app.ret -> shards.pool
+app.ret -> shards.ded
+
+obs: Metering and quality {
+  class: zone
+  tr: "Tenant-scoped traces,\ncost per span" {class: store}
+  roll: "Per-tenant cost rollup" {class: svc}
+  leak: "Leak suite on fixture\ntenants, gate in CI" {class: svc}
+  tr -> roll {class: async}
+}
+app.gen -> obs.tr {class: async}

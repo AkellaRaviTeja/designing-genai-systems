@@ -46,6 +46,7 @@ book:
         - systems/07-simple-rag.qmd
         - systems/08-production-rag.qmd
         - systems/09-conversational-rag.qmd
+        - systems/10-multi-tenant-rag.qmd
     - part: "Real-time and conversational"
       chapters:
         - systems/28-voice-agent.qmd

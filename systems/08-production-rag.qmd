@@ -40,7 +40,7 @@ will have to fit inside.
 | How much of the traffic hinges on an exact identifier? | If identifiers matter, dense retrieval alone cannot work, however good the embedding model | About a third of questions name an error code, form number, HS code or shipment reference |
 | Do people use the documents' words? | If not, retrieval needs help translating their words into the documents' words | Often not. Hub staff say "the gun" for the RF handheld terminal and "the cage" for the high-value store |
 | Who asks, and how fast must it be? | Support agents have a customer waiting; every stage we add comes out of their budget | First words of the answer within 2 s and the full answer within 5 s, both at p95, for agents. Hub staff tolerate more |
-| Can everyone read everything? | Per-user permissions are a different system (System 10) | Yes: operations content is readable by all operations and support staff |
+| Can everyone read everything? | Per-user permissions are a different system ([System 10](10-multi-tenant-rag.qmd)) | Yes: operations content is readable by all operations and support staff |
 | Can a third vendor see the text? | A hosted reranker sends every candidate passage to another company | Legal accepts a reranking API under the same data processing terms as the model provider, as for System 7 |
 | What do we reuse from System 7? | Chunking, sync, grounding and the quality loop were all designed there | All of it. This chapter changes retrieval; the answer contract downstream stays as it was |
 | Languages? | Keyword search and rerankers are language-specific | English. Hindi is a variant (see Variants) |
@@ -578,7 +578,7 @@ question before retrieval. The rewrite stage built here is where that happens; [
 
 **If some documents were restricted.** Both retrievers must apply the same permission filter before
 fusion, or the reranker will see, and the trace store will record, passages the user may not read.
-That is System 10.
+That is [System 10](10-multi-tenant-rag.qmd).
 
 ## Trade-offs
 

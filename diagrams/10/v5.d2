@@ -1,0 +1,20 @@
+...@../_theme
+direction: down
+
+user: Members of many tenants {class: actor}
+
+app: Ask service {
+  class: zone
+  lim: "Per-tenant rate limit\nand monthly quota" {class: [svc; new]}
+  pipe: "Retrieve, rerank,\nanswer" {class: svc}
+  lim -> pipe
+}
+user -> app.lim: turns
+vend: "Model, rerank and\nembedding APIs" {class: ext}
+app.pipe -> vend: "usage per call"
+tr: "Traces: tenant on every span,\ncost from tokens x price table" {class: [store; new]}
+app.pipe -> tr {class: async}
+roll: "Daily per-tenant rollup\nmetered + allocated" {class: [svc; new]}
+tr -> roll {class: async}
+fin: Finance and plan limits {class: actor}
+roll -> fin {class: async}
