@@ -1,0 +1,23 @@
+...@../_theme
+direction: down
+
+agent: Support agent {class: actor}
+zd: Zendesk {class: ext}
+
+app: Assistant service {
+  class: zone
+  loop: "Loop: call model,\nrun tool_use blocks" {class: svc}
+  cat: "9 hand-written tools\nfixed order, cache breakpoint" {class: [svc; new]}
+  shaper: "Shape results:\nfields the model needs" {class: [svc; new]}
+  model: "Sonnet 5.5\ncached prefix" {class: [model; new]}
+  cat -> loop
+  loop <-> model
+  loop -> shaper
+}
+
+api: Internal APIs {class: ext}
+
+agent -> app.loop: question on a ticket
+app.loop -> zd: read ticket
+app.shaper -> api
+app.loop -> agent: answer

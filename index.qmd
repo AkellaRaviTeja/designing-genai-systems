@@ -46,12 +46,12 @@ toc: false
     <ul><li>From naive RAG to grounded answers</li><li>Hybrid search, GraphRAG, enterprise search</li><li>Text-to-SQL and code search</li></ul>
     <div class="meta"><span class="chip"><b>10</b>&nbsp;SYSTEMS · 4 WRITTEN</span><span class="open">Open →</span></div>
   </a>
-  <a class="part-card p-agents" href="appendix/roadmap.html#part-iii-agents-and-tools">
+  <a class="part-card p-agents" href="systems/17-tool-calling-assistant.html">
     <div class="cover"><img src="assets/covers/agents.svg" alt=""></div>
     <span class="pk">PART III</span>
     <h3>Agents and tools</h3>
     <ul><li>Tool calling and MCP platforms</li><li>Agents that take real actions</li><li>Coding and computer-use agents</li></ul>
-    <div class="meta"><span class="chip"><b>10</b>&nbsp;SYSTEMS · SOON</span><span class="open">Roadmap →</span></div>
+    <div class="meta"><span class="chip"><b>10</b>&nbsp;SYSTEMS · 1 WRITTEN</span><span class="open">Open →</span></div>
   </a>
   <a class="part-card p-realtime" href="systems/28-voice-agent.html">
     <div class="cover"><img src="assets/covers/realtime.svg" alt=""></div>
