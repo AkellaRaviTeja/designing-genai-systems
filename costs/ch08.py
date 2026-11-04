@@ -62,7 +62,7 @@ CANDIDATES = 30
 V2_CANDIDATES = 50
 
 # Query rewriting on Haiku 5.5 with a cached glossary prefix, skipped for identifier queries.
-REWRITE_SHARE = 0.55
+REWRITE_SHARE = 0.65  # worked-scenario assumption: about a third of questions name an identifier
 REWRITE_PREFIX = 2_000
 REWRITE_IN = 60
 REWRITE_OUT = 90
@@ -74,11 +74,10 @@ GOLDEN = 400
 EVAL_RUNS = 30
 JUDGE_IN, JUDGE_OUT = 3_500, 200
 
-# Self-hosted reranker sizing (rule of thumb inputs, stated in the chapter).
+# Self-hosted reranker break-even. Scenario inputs for peak traffic; no throughput is assumed.
 BUSY_SHARE = 0.85  # share of queries in business hours
 PEAK_FACTOR = 2  # peak over the business-hour average
-GPU_EFFICIENCY = 0.35  # share of datasheet BF16 an encoder reaches at these lengths
-MIN_GPUS = 2
+MIN_GPUS = 2  # two instances for redundancy, whatever the load
 
 
 def build(P, H):
@@ -116,7 +115,8 @@ def build(P, H):
     q_pipeline = q_gen + q_rr + REWRITE_SHARE * q_rw_cached + q_emb
 
     flops = 2 * rr["params_b"] * 1e9 * rr_tokens
-    qps_per_gpu = gpu["bf16_tflops"] * 1e12 * GPU_EFFICIENCY / flops
+    ceiling_qps = gpu["bf16_tflops"] * 1e12 / flops  # datasheet peak, an upper bound
+    gpu_month = l4["hourly"] * HOURS_PER_MONTH
 
     corpus_launch = PAGES * PAGE_TOKENS + PDFS * PDF_TOKENS
     assert corpus_launch == SCALES["launch"]["corpus"]
@@ -132,6 +132,7 @@ def build(P, H):
         "v0_in": f"{v0_in:,}",
         "wide_in": f"{wide_in:,}",
         "wide_ratio": f"{wide_in / v0_in:.1f}",
+        "wide_cost_ratio": f"{q_wide / q_v0:.1f}",
         "out_tokens": f"{OUTPUT}",
         "rr_tokens": f"{rr_tokens:,}",
         "rr_tokens_v2": f"{rr_tokens_v2:,}",
@@ -158,8 +159,7 @@ def build(P, H):
         "rr_params": f"{rr['params_b'] * 1e3:.0f}M",
         "rr_tflop": f"{flops / 1e12:.0f}",
         "l4_tflops": f"{gpu['bf16_tflops']}",
-        "gpu_eff": pct(GPU_EFFICIENCY),
-        "qps_per_gpu": f"{qps_per_gpu:.1f}",
+        "ceiling_qps": f"{ceiling_qps:.1f}",
     }
 
     cost = Table(
@@ -210,18 +210,19 @@ def build(P, H):
         rows[name] = r
 
         peak_qps = BUSY_SHARE * q / (BUSINESS_HOURS * 3600) * PEAK_FACTOR
-        gpus = max(MIN_GPUS, math.ceil(peak_qps / qps_per_gpu))
         rr_rows[name] = {
             "pro": q * q_rr,
             "fast": q * q_rr_fast,
-            "gpu_flat": gpus * HOURS_PER_MONTH * l4["hourly"],
-            "gpu_scaled": (
-                gpus * BUSINESS_HOURS + MIN_GPUS * (HOURS_PER_MONTH - BUSINESS_HOURS)
-            )
-            * l4["hourly"],
-            "gpus": gpus,
             "peak": peak_qps,
         }
+        for api in ("pro", "fast"):
+            # The largest always-on L4 fleet the API bill would pay for, and the throughput
+            # each GPU would then have to sustain at peak.
+            fleet = math.floor(rr_rows[name][api] / gpu_month)
+            rr_rows[name][f"{api}_fleet"] = fleet
+            rr_rows[name][f"{api}_need"] = (
+                peak_qps / fleet if fleet >= MIN_GPUS else None
+            )
 
         v[f"{name}.queries"] = num(q)
         v[f"{name}.corpus"] = num(s["corpus"])
@@ -238,10 +239,12 @@ def build(P, H):
             (r["db"] + r["app"] + r["ingest"] + r["eval"]) / r["total"]
         )
         v[f"{name}.peak_qps"] = f"{peak_qps:.2g}"
-        v[f"{name}.gpus"] = f"{gpus}"
         v[f"{name}.rr_fast"] = usd(rr_rows[name]["fast"])
-        v[f"{name}.rr_gpu_flat"] = usd(rr_rows[name]["gpu_flat"])
-        v[f"{name}.rr_gpu_scaled"] = usd(rr_rows[name]["gpu_scaled"])
+        for api in ("pro", "fast"):
+            need = rr_rows[name][f"{api}_need"]
+            v[f"{name}.{api}_fleet"] = str(rr_rows[name][f"{api}_fleet"])
+            v[f"{name}.{api}_need"] = "" if need is None else f"{need:.1f}"
+            v[f"{name}.{api}_need_share"] = "" if need is None else pct(need / ceiling_qps)
         fast_total = r["total"] - r["rerank"] + rr_rows[name]["fast"]
         v[f"{name}.fast_total"] = usd(fast_total)
         v[f"{name}.fast_saving"] = pct(1 - fast_total / r["total"])
@@ -286,15 +289,30 @@ def build(P, H):
     rerank_t.add("Rerank 5 Pro API", *(usd(rr_rows[s]["pro"]) for s in SCALES))
     rerank_t.add("Rerank 5 Fast API", *(usd(rr_rows[s]["fast"]) for s in SCALES))
     rerank_t.add(
-        "Self-hosted on L4, sized for peak, always on",
-        *(usd(rr_rows[s]["gpu_flat"]) for s in SCALES),
+        "L4s the Pro bill pays for, always on",
+        *(str(rr_rows[s]["pro_fleet"]) for s in SCALES),
     )
     rerank_t.add(
-        "Self-hosted on L4, peak fleet in business hours only",
-        *(usd(rr_rows[s]["gpu_scaled"]) for s in SCALES),
+        "Queries/s each must sustain to match Pro",
+        *(
+            "API cheaper than 2 GPUs"
+            if rr_rows[s]["pro_need"] is None
+            else f"{rr_rows[s]['pro_need']:.1f} ({pct(rr_rows[s]['pro_need'] / ceiling_qps)} of datasheet peak)"
+            for s in SCALES
+        ),
     )
     rerank_t.add(
-        "L4 GPUs at peak (minimum 2)", *(str(rr_rows[s]["gpus"]) for s in SCALES)
+        "L4s the Fast bill pays for, always on",
+        *(str(rr_rows[s]["fast_fleet"]) for s in SCALES),
+    )
+    rerank_t.add(
+        "Queries/s each must sustain to match Fast",
+        *(
+            "API cheaper than 2 GPUs"
+            if rr_rows[s]["fast_need"] is None
+            else f"{rr_rows[s]['fast_need']:.1f} ({pct(rr_rows[s]['fast_need'] / ceiling_qps)} of datasheet peak)"
+            for s in SCALES
+        ),
     )
     rerank_t.add(
         "Peak queries per second", *(f"{rr_rows[s]['peak']:.2g}" for s in SCALES)
