@@ -63,3 +63,7 @@ experts = 128
 experts_per_token = 4
 expert_param_share = 0.95
 source = "OpenAI gpt-oss-120b model card and config.json (MXFP4 mixture-of-experts weights)"
+
+[model.bge-reranker-v2-m3]
+params_b = 0.568
+source = "BAAI bge-reranker-v2-m3 model card (cross-encoder on the XLM-RoBERTa large backbone of bge-m3)"

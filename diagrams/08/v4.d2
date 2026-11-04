@@ -1,0 +1,28 @@
+...@../_theme
+direction: down
+
+user: Support agent {class: actor}
+
+path: "Critical path, p95 first token" {
+  class: zone
+  api: Answer service {class: svc}
+  par: In parallel {
+    class: zone
+    ret1: Hybrid retrieval, original {class: svc}
+    rw: "Rewrite\n350 ms timeout" {class: [model; new]}
+  }
+  ret2: Hybrid retrieval, rewritten {class: svc}
+  rr: "Rerank 30, not 50\n500 ms timeout" {class: [model; new]}
+  llm: "Grounded answer, streamed\nfirst words under 2 s" {class: [model; new]}
+  api -> par.ret1
+  api -> par.rw
+  par.rw -> ret2
+  par.ret1 -> rr
+  ret2 -> rr
+  rr -> llm
+  par.rw -> rr: timeout: original only {class: hot}
+}
+user -> path.api: question
+fused: Fused order fallback {class: [svc; new]}
+path.rr -> fused: timeout {class: hot}
+fused -> path.llm {class: hot}

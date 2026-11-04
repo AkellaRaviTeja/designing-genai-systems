@@ -1,0 +1,35 @@
+...@../_theme
+direction: down
+
+ingest: Ingestion {
+  class: zone
+  parse: Parse by heading + header {class: svc}
+  ids: "Extract identifiers\nWMS-4012, KF-118, HS 8471.30" {class: [svc; new]}
+  emb: Embed chunks {class: model}
+  parse -> ids -> emb {class: offline}
+}
+
+db: Postgres, one row per chunk {
+  class: store
+  label: "Postgres, one row per chunk\nvector + tsvector + identifiers"
+}
+ingest.emb -> db: one transaction {class: offline}
+
+user: Agent or hub staff {class: actor}
+query: Query path {
+  class: zone
+  api: Answer service {class: svc}
+  dense: Dense top 50 {class: svc}
+  kw: "Keyword top 50\nidentifiers weighted first" {class: [svc; new]}
+  rrf: Reciprocal rank fusion {class: [svc; new]}
+  llm: Grounded answer {class: model}
+  api -> dense
+  api -> kw
+  dense -> rrf
+  kw -> rrf
+  rrf -> llm: top 5 fused
+}
+user -> query.api: question
+query.dense -> db
+query.kw -> db {class: hot}
+query.llm -> user: answer + sources
