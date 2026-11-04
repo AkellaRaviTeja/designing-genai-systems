@@ -77,7 +77,9 @@ In retrieval systems, the retrieved passages are usually most of the input. Retr
 passages to be safe and sending all of them costs four times as much as sending five, and often
 makes answers worse because the model has more irrelevant text to ignore. Retrieve wide (20 to 50
 candidates), rerank with a cross-encoder, and send the top 3 to 8. Reranking costs a fraction of
-a cent per query and usually pays for itself in generation tokens alone.
+a cent per query and usually pays for itself in generation tokens alone when the generator is a
+mid-tier or larger model. With the cheapest models it can cost more than the tokens it saves, and
+has to earn its place on quality instead ([System 8](../systems/08-production-rag.qmd)).
 
 ### O3 History compaction {#o3}
 

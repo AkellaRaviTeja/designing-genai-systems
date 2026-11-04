@@ -4,43 +4,45 @@ description: "Retrieval over 36,000 operations documents full of error codes and
 ---
 
 ::: {.chapter-meta}
-[Level <span class="level">★★★</span>]{} [Part II, Retrieval]{} [Uses <span class="ocode">O1</span> <span class="ocode">O2</span> <span class="ocode">O9</span> <span class="ocode">O19</span>]{}
+[Level <span class="level">★★★</span>]{} [Part II, Retrieval]{} [Uses <span class="ocode">O1</span> <span class="ocode">O2</span> <span class="ocode">O9</span>]{}
 :::
 
 System 7 ended with ten failures it could not fix: questions that hinged on an exact term, such as
 an error code or a form number, which dense embeddings blur into their neighbours. On an HR wiki
 that was ten questions in 150. On an operations knowledge base it is a third of the traffic. This
-chapter keeps everything System 7 built (structure-aware chunks, continuous sync, the grounded
-answer contract, the quality loop) and rebuilds the retrieval stage in front of it, one measured
-failure at a time. The new stages also cost latency and money, so the chapter ends up as much about
-a time budget as about relevance.
+chapter keeps what System 7 built (structure-aware chunks, continuous sync, the grounded answer
+contract, the quality loop) and rebuilds the retrieval stage in front of it, one failure at a time.
+The new stages also cost latency and money, so the chapter ends up as much about a time budget as
+about relevance.
 
 ## The brief
 
 ::: {.brief}
 [From the head of Customer Operations, Kestrel Freight]{.from}
 The wiki bot is the most popular thing IT has shipped all year. Can we have the same for operations?
-Our 300 support agents and the hub teams look things up all day: SOPs, carrier manuals, the WMS
-error guide, customs notes. The last search tool we bought was useless with codes. Type WMS-4012
-and you get every page except the one for WMS-4012. And it has to be quick: our agents are mid-chat
-with a customer when they ask.
+Since we took over the national carrier's hub network, our 300 support agents and 4,000 hub staff
+look things up all day: SOPs, carrier manuals, the WMS error guide, customs notes. The last search
+tool we bought was useless with codes. Type WMS-4012 and you get every page except the one for
+WMS-4012. And it has to be quick: our agents are mid-chat with a customer when they ask.
 :::
 
-Kestrel Freight is the worked scenario from System 7, a year later. Two phrases in the brief carry
-the design: "useless with codes" names the failure, and "mid-chat with a customer" sets a latency
-budget that every fix will have to fit inside.
+Kestrel Freight is the worked scenario from System 7, a year and one acquisition later. Every
+measurement in this chapter belongs to that worked scenario: the numbers show how to reason about
+each stage, not what any real system scored. Two phrases in the brief carry the design: "useless
+with codes" names the failure, and "mid-chat with a customer" sets a latency budget that every fix
+will have to fit inside.
 
 ## Questions to ask
 
 | Question | Why it changes the design | We assume |
 |---|---|---|
 | What is in the corpus, and how much? | Size decides whether one Postgres database still holds everything; format decides parsing | {{< var ch08.pages >}} Confluence pages and {{< var ch08.pdfs >}} PDFs (SOPs, carrier manuals, customs guidance), about {{< var ch08.launch.corpus >}} tokens |
-| How much of the traffic hinges on an exact identifier? | If identifiers matter, dense retrieval alone cannot work, however good the embedding model | A third of support questions name an error code, form number, HS code or shipment reference |
-| Do people use the documents' words? | If not, retrieval needs help translating their words into the documents' words | Often not. Hub staff say "the gun" for the RF handheld terminal and "POD" for proof of delivery |
+| How much of the traffic hinges on an exact identifier? | If identifiers matter, dense retrieval alone cannot work, however good the embedding model | About a third of questions name an error code, form number, HS code or shipment reference |
+| Do people use the documents' words? | If not, retrieval needs help translating their words into the documents' words | Often not. Hub staff say "the gun" for the RF handheld terminal and "the cage" for the high-value store |
 | Who asks, and how fast must it be? | Support agents have a customer waiting; every stage we add comes out of their budget | First words of the answer within 2 s and the full answer within 5 s, both at p95, for agents. Hub staff tolerate more |
 | Can everyone read everything? | Per-user permissions are a different system (System 10) | Yes: operations content is readable by all operations and support staff |
 | Can a third vendor see the text? | A hosted reranker sends every candidate passage to another company | Legal accepts a reranking API under the same data processing terms as the model provider, as for System 7 |
-| What do we reuse from System 7? | Chunking, sync, grounding and the quality loop were all measured there | All of it. This chapter changes retrieval and nothing downstream of it |
+| What do we reuse from System 7? | Chunking, sync, grounding and the quality loop were all designed there | All of it. This chapter changes retrieval; the answer contract downstream stays as it was |
 | Languages? | Keyword search and rerankers are language-specific | English. Hindi is a variant (see Variants) |
 
 The third answer is the one people skip. A question written in the user's vocabulary against
@@ -53,7 +55,7 @@ is the hardest failure in this chapter to fix.
 Corpus:   {{< var ch08.pages >}} pages x 1,600 tokens = {{< var ch08.page_tokens >}}
           {{< var ch08.pdfs >}} PDFs x 8,000 tokens   = {{< var ch08.pdf_tokens >}}
           total {{< var ch08.launch.corpus >}} tokens / 400 per chunk = {{< var ch08.launch.chunks >}} chunks
-Vectors:  {{< var ch08.launch.chunks >}} x 1,536 dims x 4 bytes x 1.5 = {{< var ch08.launch.index_gb >}} GB
+Vectors:  {{< var ch08.launch.chunks >}} x 1,536 dims x 4 bytes x 1.5 index overhead (rule of thumb) = {{< var ch08.launch.index_gb >}} GB
 Embed it: {{< var ch08.launch.corpus >}} tokens x {{< var ch08.emb_price >}}/M = {{< var ch08.launch.embed_once >}}, once
 
 Traffic:  hub staff 4,000 x 60% weekly active x 10 questions x 4.35 weeks = {{< var ch08.ops_q >}}
@@ -69,51 +71,57 @@ Per query, final design:
 The corpus is seven and a half times System 7's, and still fits comfortably in one Postgres
 instance: {{< var ch08.launch.index_gb >}} GB of vectors plus a full-text index on a machine with
 16 GB of memory. Traffic is still well under one query per second. Nothing here is a scaling problem
-yet.
+yet. The system prompt is System 7's 450 tokens plus 50 tokens of instructions about SOP versions.
 
 The last two lines are the surprise. **The reranker reads {{< var ch08.rr_to_gen >}} times as many
 tokens as the generator,** because it scores thirty passages to choose six. Even at a lower price per
-token, it costs more per query than writing the answer does. Most RAG guides treat reranking as a
-rounding error. With a small, cheap generation model it is the largest variable cost in the system,
-and the Cost section follows that through.
+token, it costs more per query than writing the answer does. With a small, cheap generation model it
+is the largest variable cost in the system, and the Cost section follows that through.
 
 ## Version 0
 
 Version 0 is System 7's final design pointed at the new corpus: structure-aware chunks with heading
 paths, continuous sync, dense retrieval of the top 5 by cosine similarity in Postgres with pgvector,
 and the grounded answer contract with numbered sources, citations and a code-checked refusal path.
-Generation runs on Claude Haiku 5.5, the model System 7 stepped down to, re-checked on this corpus.
-PDFs are parsed into headings and tables by a layout parser; the harder cases (scanned forms,
-charts) are System 11's problem and are excluded from this golden set.
+Generation runs on Claude Haiku 5.5, the model System 7 stepped down to. PDFs are parsed into
+headings and tables by a layout parser; the harder cases (scanned forms, charts) are System 11's
+problem and are excluded from this golden set.
 
 ![Version 0: System 7's design, unchanged, over the operations corpus.](../images/08/v0.svg){fig-alt="Version 0. Ingestion every 15 minutes parses Confluence, SOP PDFs and carrier manuals by heading, embeds chunks and writes them to Postgres with pgvector. The query path embeds the question, takes the top 5 chunks by cosine similarity, generates a grounded answer and runs the citation check."}
 
 A golden set measures it. System 7's 150 questions gave an uncertainty of about plus or minus 8
 points, too coarse to tell a good reranker from a mediocre one, so this one has 400: about plus or
-minus 5 points ([F4](../foundations/f4-evaluation.qmd)). The questions come from three months of the
-support desk's internal chat and the hub teams' channels, and they are split into four slices,
-because a single average would hide exactly the failure the brief describes:
+minus 5 points overall ([F4](../foundations/f4-evaluation.qmd)). The questions come from three
+months of the support desk's internal chat and the hub teams' channels, and they are split into four
+slices, because a single average would hide exactly the failure the brief describes:
 
-| Slice | Questions | Example |
-|---|---|---|
-| Exact term | 120 | "Handheld shows WMS-4012 after scanning a pallet" |
-| How-to | 160 | "How do I raise a damage claim for a cross-docked shipment?" |
-| Vague | 60 | "gun won't sync after shift change" |
-| No answer in the corpus | 60 | "Can we ship lithium batteries to the Maldives by sea?" |
+| Slice | Questions | Uncertainty, 95% | Example |
+|---|---|---|---|
+| Exact term | 120 | ±9 points | "Handheld shows WMS-4012 after scanning a pallet" |
+| How-to | 160 | ±8 points | "How do I raise a damage claim for a cross-docked shipment?" |
+| Vague | 60 | ±13 points | "gun won't sync after shift change" |
+| No answer in the corpus | 60 | ±13 points | "Can we ship lithium batteries to the Maldives by sea?" |
+
+The uncertainty column is the worst case, at a score of 50%, for each slice measured on its own.
+Every comparison in this chapter is paired (the same questions, before and after a change), which
+detects smaller differences than these intervals suggest; F4 shows how. A slice of 60 still cannot
+show a change of two or three questions, and the chapter does not try to read one.
 
 For each answerable question we record which chunk holds the answer, so retrieval can be scored on
 its own: **recall at k** is the share of answerable questions whose answer chunk is in the top k.
-Answers are judged as in System 7, counting a correct refusal as correct.
+Answers are judged as in System 7, counting a correct refusal as correct. A separate calibration set
+of 100 questions (60 answerable, 40 not), drawn the same way, is used for setting thresholds and
+never for reporting.
 
 ## Where exact terms break
 
 ::: {.breaks}
-Version 0 on the 400-question golden set (worked scenario):
+Version 0 on the 400-question golden set:
 
 - **Recall at 5:** 62% of answerable questions. Exact term 42%, how-to 81%, vague 52%.
-- **Answers correct:** 66%. Confident answers to unanswerable questions: 10 of 60.
-- **Recall at 50 on the exact-term slice:** 63%. For a third of identifier questions, the answer
-  chunk is not even in the top 50.
+- **Answers correct:** 61%. Confident answers to unanswerable questions: 10 of 60.
+- **Recall at 50 on the exact-term slice:** 63%. For more than a third of identifier questions,
+  the answer chunk is not even in the top 50.
 :::
 
 The how-to slice behaves like System 7's wiki. The exact-term slice is a different system. Ask
@@ -124,8 +132,8 @@ similar meanings close together. An error code has no meaning to be similar to; 
 the right tool for a key is an exact match.
 
 The last line of the evidence matters for what comes next. If the answer were at rank 12 we could
-retrieve more. For a third of these questions it is not in the top 50 at all, so retrieving more of
-the same ranking cannot fix it.
+retrieve more. For more than a third of these questions it is not in the top 50 at all, so
+retrieving more of the same ranking cannot fix it.
 
 ## Version 1
 
@@ -136,27 +144,44 @@ Add a second retriever that matches words instead of meanings, and merge the two
 **Keyword search in the same database.** Each chunk row gets a `tsvector` column built from its
 heading path and text, with a GIN index. Postgres full-text search is not BM25: its ranking functions
 use term frequency and proximity but not inverse document frequency, so a rare word counts no more
-than a common one. For our purposes that matters less than it sounds. Fusion (below) uses only the
-order of results, not their scores, and the questions where keyword search earns its place are the
-ones that contain an identifier, which is rare by nature. In this worked scenario, a BM25 index in
-OpenSearch scored within the noise of Postgres full text on the golden set, and would have been a
-second system to run and keep in sync.
+than a common one. We start with it anyway, for two reasons. Fusion (below) uses only the order of
+results, not their scores. And each identifier appears in only a few chunks, which is where exact
+matching is strongest and inverse document frequency adds least. Whether that holds for your corpus
+is a measurement: if traces show the right chunk losing on keyword rank for ordinary words, a BM25
+index (a Postgres extension, if your provider offers one, or a separate engine) is the next step.
 
 **Identifiers as their own column.** We do not trust a general-purpose text parser with codes. At
 ingestion, a catalogue of regular expressions (WMS error codes, Kestrel form numbers such as KF-118,
 HS tariff codes such as 8471.30, shipment references) extracts every identifier in a chunk into a
-`text[]` column with its own GIN index. The same catalogue runs over each question. A chunk that
-contains an identifier from the question goes to the top of the keyword list:
+`text[]` column, declared `NOT NULL DEFAULT '{}'`, with its own GIN index. Identifiers are
+normalised before they are stored: upper case, spaces and hyphens removed, so WMS-4012, wms 4012 and
+WMS4012 are one key. HS codes are hierarchical, so a chunk about 8471.30 also stores 8471, and a
+question naming the heading finds its subheadings. The same catalogue and normalisation run over
+each question.
+
+The question's words become an OR query, because `plainto_tsquery` and `websearch_to_tsquery` both
+require every word to match, and a natural-language question almost never has all its words in one
+chunk. A chunk that contains an identifier from the question goes to the top of the list:
 
 ```sql
 SELECT id
-FROM chunks
+FROM chunks,
+     CAST(replace(plainto_tsquery('english', $1)::text, ' & ', ' | ') AS tsquery) AS q
 WHERE live
-  AND (tsv @@ websearch_to_tsquery('english', $1) OR identifiers && $2)
+  AND (tsv @@ q OR identifiers && $2)
 ORDER BY (identifiers && $2) DESC,
-         ts_rank_cd(tsv, websearch_to_tsquery('english', $1)) DESC
+         ts_rank_cd(tsv, q) DESC
 LIMIT 50;
 ```
+
+`ts_rank_cd` is computed for every matching row, and an OR query over common words matches many
+rows. At {{< var ch08.launch.chunks >}} chunks that is affordable; it is the first query to watch as
+the corpus grows.
+
+The dense side needs two settings to return 50 rows. pgvector's HNSW search returns at most
+`hnsw.ef_search` candidates (40 by default), so it is raised to 100. And the `live` filter is
+applied after the index scan, which can leave fewer than 50 rows; pgvector 0.8 and later can keep
+scanning until enough rows pass the filter (`hnsw.iterative_scan`).
 
 **Reciprocal rank fusion.** Dense and keyword scores are on different scales and cannot be added.
 Reciprocal rank fusion ignores the scores and combines positions: each document scores
@@ -172,7 +197,7 @@ by Cormack, Clarke and Büttcher. A document missing from a list gets nothing fr
 The constant k is what makes this work: at k = 60, rank 1 is worth only about 1.13 times rank 9
 (69/61), so a document that both retrievers rank moderately well beats one that only one
 retriever loves. Fusion takes the top 50 from each list and sends the top 5 fused chunks to the
-model.
+model, keeping System 7's rule of at most one chunk set per page.
 
 The vector, the `tsvector` and the identifiers for a chunk are written in one transaction by the
 same ingestion worker. Running keyword search in a separate engine would have meant two indexes that
@@ -182,8 +207,8 @@ can disagree about which version of a page exists; one database means they canno
 
 ::: {.breaks}
 After version 1: recall at 5 rises from 62% to 76%. Exact term 42% to 79%, how-to 81% to 82%,
-vague 52% to 55%. Answers correct rise from 66% to 74%. Hybrid retrieval cost the how-to slice
-nothing, which is the result to check before keeping it.
+vague 52% to 55%. Answers correct rise from 61% to 73%. The how-to slice did not get worse, which
+is the result to check before keeping hybrid retrieval.
 :::
 
 ## Where ranking breaks
@@ -193,9 +218,10 @@ After version 1, **recall at 50 is 95% but recall at 5 is 76%.** For 19 points o
 questions, the answer chunk is among the candidates and ranked too low to reach the model.
 
 Sending the top 20 instead of the top 5: recall at 20 is 88%, but answers correct move only from
-74% to 75%, inside the noise. Input grows from {{< var ch08.v0_in >}} to {{< var ch08.wide_in >}}
-tokens per query ({{< var ch08.wide_ratio >}} times), and cost per answer from
-{{< var ch08.q_v0 >}} to {{< var ch08.q_wide >}}.
+73% to 74%, one point on a paired comparison. Input grows from {{< var ch08.v0_in >}} to
+{{< var ch08.wide_in >}} tokens per query ({{< var ch08.wide_ratio >}} times), and cost per answer
+from {{< var ch08.q_v0 >}} to {{< var ch08.q_wide >}} ({{< var ch08.wide_cost_ratio >}} times; the
+output does not grow).
 :::
 
 Rank fusion knows where each retriever put a chunk and nothing about whether the chunk answers the
@@ -203,10 +229,10 @@ question. Both retrievers are fast because they compare a precomputed representa
 question against precomputed representations of chunks. Neither ever reads the question and the
 chunk together.
 
-The tempting fix, sending more chunks, does not work, and the evidence says why: the model is given
-the right passage more often but buried in fifteen wrong ones, and answers barely improve while cost
-more than triples. [F5](../foundations/f5-optimisation.qmd) makes the same point as a cost rule
-(<span class="ocode">O2</span>); here it is a quality result too.
+The tempting fix, sending more chunks, does not work here, and the evidence says why: the model is
+given the right passage more often but alongside nineteen others, and answers barely improve while
+cost rises {{< var ch08.wide_cost_ratio >}} times. [F5](../foundations/f5-optimisation.qmd) makes
+the same point as a cost rule (<span class="ocode">O2</span>).
 
 ## Version 2
 
@@ -219,37 +245,40 @@ pattern follows from that: retrieve wide with cheap methods, then rerank a few d
 the expensive one.
 
 We send the 50 fused candidates to a hosted reranker (Cohere Rerank 5 Pro, under the data
-processing terms Legal reviewed) and keep the 6 highest-scoring. Each call scores 50 passages of
-about 440 tokens including the question: {{< var ch08.rr_tokens_v2 >}} tokens, {{< var ch08.q_rr_v2 >}}
-a query at {{< var ch08.rr_pro_price >}}/M.
+processing terms Legal reviewed) and keep the 6 highest-scoring, at most two from any one document.
+Each call scores 50 passages of about 440 tokens including the question:
+{{< var ch08.rr_tokens_v2 >}} tokens, {{< var ch08.q_rr_v2 >}} a query at
+{{< var ch08.rr_pro_price >}}/M.
 
-The reranker's score has a second use. Its scores are far better separated than cosine similarities:
-when nothing in the corpus answers the question, even the best candidate scores low. Calibrated on
-the golden set, a threshold on the top score sends the question to System 7's refusal path before
-the model sees it. The threshold is set where it refuses no more than 3% of answerable questions.
+The reranker's score has a second use. When nothing in the corpus answers the question, even the
+best candidate tends to score low, so a threshold on the top score can send the question to System
+7's refusal path before the model sees it. The threshold is set on the calibration set, not the
+golden set, at the point where it refuses no more than 3% of the calibration set's answerable
+questions; the golden set then reports what it does.
 
 ![Version 2: rerank 50 fused candidates and keep the best 6, or refuse.](../images/08/v2.svg){fig-alt="Version 2. Dense and keyword retrieval each return 50, fusion keeps 50 candidates, a cross-encoder reranker (an external API) scores the question with each candidate. If the top score is below a threshold, the question is refused with links to the closest pages; otherwise the top 6 by score go to the grounded answer."}
 
 ::: {.breaks}
-After version 2: recall at 6 rises from 76% to 87%. Exact term 92%, how-to 93%, vague 61%.
-Answers correct rise from 74% to 82%. Confident answers to unanswerable questions fall from 10 of
-60 to 4 of 60.
+After version 2: recall at 6 rises from 76% to 87%. Exact term 92%, how-to 93%, vague 62%.
+Answers correct rise from 73% to 82%. Confident answers to unanswerable questions fall from 10 of
+60 to 4 of 60; the threshold also refused 8 of the 340 answerable questions, 5 of them vague.
 :::
 
 ## Where the question breaks
 
 ::: {.breaks}
-After version 2, the vague slice sits at 61% recall at 6 against 92% and 93% for the other two.
-Of the 23 vague questions that miss: in 9 the answer chunk is not among the 50 candidates at all,
-and in 14 it is a candidate but scores below sixth.
+After version 2, the vague slice sits at 62% recall at 6 against 92% and 93% for the other two,
+and it accounts for most of the threshold's wrong refusals. Of the 23 vague questions that miss:
+in 9 the answer chunk is not among the 50 candidates at all, and in 14 it is a candidate but scores
+below sixth.
 :::
 
 "Gun won't sync after shift change" contains no word that appears in the right document. The SOP
 says "RF handheld terminal fails to reconnect to the WMS after a user logs off". Keyword search
-finds nothing; dense search finds pages about synchronising calendars; even the reranker, reading
-both texts, cannot know that "gun" is Kestrel slang for a barcode scanner. Hub staff have a
-vocabulary of a few hundred such terms (POD, the gun, the cage, a short-ship, "the portal" for the
-customer shipment site) that no model was trained on and no document uses.
+finds nothing; dense search finds pages about synchronising calendars; and the reranker, reading
+both texts, has no way to know that "gun" means a barcode scanner at Kestrel. Hub staff use a few
+hundred such terms (the gun, the cage, a short-ship, "the portal" for the customer shipment site),
+some standard in logistics and many local to Kestrel, and the documents use the formal names.
 
 ## Version 3
 
@@ -264,26 +293,29 @@ terminal does not reconnect to the WMS after a user logs off at shift change."
 
 Retrieval then runs for the original question and for the rewrite, and fusion merges all four lists
 (two retrievers, two queries) before reranking. Keeping the original matters: the rewriter is
-sometimes wrong, and when it is, the original still competes.
+sometimes wrong, and when it is, the original still competes. The reranker scores candidates against
+the rewritten sentence when there is one, since that is the text in the documents' words, and the
+refusal threshold is recalibrated on the calibration set for that reason.
 
 Two rules keep the cost down. Rewriting is **skipped when the question contains an identifier**,
 which the regex catalogue already detects: a question naming WMS-4012 is as specific as it can get,
-and rewriting it only risks changing the code. Hub staff name codes even more often than agents, so
-this skips about 45% of all questions. And the glossary
-is the first thing in the prompt and identical on every call, so it is cached
-(<span class="ocode">O1</span>); each rewrite costs {{< var ch08.q_rw >}} instead of
-{{< var ch08.q_rw_uncached >}}.
+and rewriting it only risks changing the code. In this worked scenario that is about a third of
+questions, so about two thirds are rewritten. And the glossary is the first thing in the prompt and
+identical on every call, so it is cached (<span class="ocode">O1</span>); each rewrite costs
+{{< var ch08.q_rw >}} instead of {{< var ch08.q_rw_uncached >}}.
 
 ![Version 3: questions without identifiers are rewritten into the documents' words, and both versions are retrieved.](../images/08/v3.svg){fig-alt="Version 3. The answer service sends questions with no identifier to a rewrite model whose cached prompt holds the operations glossary (POD, RF gun, MC9300). Hybrid retrieval runs for the original question and the rewritten queries, all lists are fused to 50 candidates, reranked, and the top 6 go to the grounded answer."}
 
-We tried and rejected the other common technique, writing a hypothetical answer and embedding that
-(often called HyDE). It improved the vague slice almost as much but cost the exact-term slice four
-points, because the invented answer contained invented error codes.
+The other common technique, writing a hypothetical answer and embedding that (often called HyDE),
+was not adopted. It needs a full answer-length generation before retrieval can start, which is
+longer than a two-line rewrite and sits on the critical path, and an invented answer about an error
+code invents error codes. The glossary rewrite is shorter, cheaper and easier to inspect.
 
 ::: {.breaks}
-After version 3: recall at 6 on the vague slice rises from 61% to 80%; how-to from 93% to 94%;
+After version 3: recall at 6 on the vague slice rises from 62% to 80%; how-to from 93% to 94%;
 exact term unchanged at 92%, since those questions skip the rewrite. Overall recall at 6 is 91%,
-and answers correct rise from 82% to 86%.
+and answers correct rise from 82% to 85%. After recalibration the threshold still refuses 8
+answerable questions, now 2 of them vague, and answers 4 of 60 unanswerable ones.
 :::
 
 ## Where latency breaks
@@ -293,21 +325,22 @@ support desk we load-tested at three times the expected peak, about 2 queries a 
 budget from the questions table: first words within 2 s at p95.
 
 ::: {.breaks}
-Load test, version 3, p95 time to first token: **2.4 s against a 2.0 s budget.** The slowest
+Load test, version 3, p95 time to first token: **2.6 s against a 2.0 s budget.** The slowest
 stages at p95, summed (an upper bound, since the slowest requests are not the same ones at each
 stage):
 
 | Stage | p95 |
 |---|---|
 | Query rewrite | 650 ms |
-| Two hybrid retrieval passes, one after the other | 120 ms |
+| Embed the original question, retrieve | 130 ms |
+| Embed the rewritten sentence, retrieve | 130 ms |
 | Rerank 50 candidates | 620 ms |
 | Generation, time to first token | 900 ms |
 | Network and service overhead | 150 ms |
-| **Total** | **2,440 ms** |
+| **Total** | **2,580 ms** |
 :::
 
-The retrieval stages added since version 0 cost 1.3 s at p95, more than generation does. Each one
+The stages added since version 0 (rewrite, second retrieval, rerank) cost 1.4 s at p95, more than generation does. Each one
 was worth its quality gain, and together they do not fit in the budget. The answer is not to remove
 one but to stop paying for each in full on every request.
 
@@ -315,31 +348,43 @@ one but to stop paying for each in full on every request.
 
 [**Changed** rewrite in parallel with first-pass retrieval under a 350 ms timeout, 30 rerank candidates instead of 50 under a 500 ms timeout, and streaming.]{.changed}
 
-**Rewrite in parallel, with a deadline.** Hybrid retrieval for the original question starts at the
-same moment as the rewrite instead of after it. If the rewrite returns within 350 ms, its queries are
-retrieved and fused in; if not, the request continues with the original question's candidates
-alone. In the load test, 12% of rewrites missed the deadline. Re-running the golden set with the
-same share of rewrites dropped at random, answers correct fell from 86% to 85%, inside the noise.
+**Rewrite in parallel, with a deadline.** Embedding and retrieval for the original question start
+at the same moment as the rewrite instead of after it. If the rewrite returns within 350 ms, its
+queries are embedded, retrieved and fused in; if not, the request continues with the original
+question's candidates alone. In the load test, 12% of rewrites missed the deadline. Re-running the
+golden set with the same share of rewrites dropped at random, answers correct fell from 85% to 84%.
 
-**Rerank fewer candidates.** Recall at 30 after fusion is 94% against 95% at 50, inside the noise,
-and reranking time grows with the number of passages scored. Thirty candidates cut reranking to
-{{< var ch08.rr_tokens >}} tokens and {{< var ch08.q_rr >}} a query, and its p95 to 380 ms.
+**Rerank fewer candidates.** Recall at 30 after fusion is 94% against 95% at 50, so 20 candidates
+were costing reranking time and buying almost nothing. Thirty candidates cut reranking to
+{{< var ch08.rr_tokens >}} tokens and {{< var ch08.q_rr >}} a query. Its p95 in the load test fell
+from 620 ms to 410 ms, less than in proportion, because part of each call's time is fixed network
+and queueing.
 
 **A fallback for the reranker.** The reranker is now a hosted dependency on the critical path. Under
 a 500 ms timeout, or on an error, the request uses the fused order and skips the score threshold.
-Answers in that mode are worse (in the golden set, about version 1's quality) but they arrive, and
-the fallback rate is a metric with an alert on it.
+Answers in that mode are worse (about version 1's quality) but they arrive. A 500 ms deadline over a
+410 ms p95 is a narrow margin, so the fallback rate is a metric with an alert on it.
 
 **Stream the answer** into the agent console as it is generated, so the 2 s budget is for the first
 words, not the whole answer, as the questions table specified.
 
-![Version 4: what runs on the critical path, and what happens when a stage is late.](../images/08/v4.svg){fig-alt="Version 4, drawn left to right. The answer service starts hybrid retrieval for the original question and the rewrite in parallel; the rewrite has a 350 ms timeout, after which the request uses the original question only. Rewritten queries get a second retrieval pass. The reranker scores 30 candidates, with a 500 ms timeout that falls back to the fused order. The answer is streamed to the support agent, first words under 2 s."}
+![Version 4: what runs on the critical path, and what happens when a stage is late.](../images/08/v4.svg){fig-alt="Version 4. The answer service starts hybrid retrieval for the original question and the rewrite in parallel; the rewrite has a 350 ms timeout, after which the request uses the original question only. Rewritten queries get a second retrieval pass. The reranker scores 30 candidates, with a 500 ms timeout that falls back to the fused order. The answer is streamed to the support agent, first words under 2 s."}
 
 ::: {.breaks}
-Load test, version 4: p95 time to first token **1.84 s** for rewritten questions (350 ms rewrite
-deadline, 60 ms second retrieval, 380 ms rerank, 900 ms first token, 150 ms overhead) and 1.49 s for
-questions with an identifier, which skip the rewrite. Answers correct 85%, recall at 6 is 90%.
+Load test, version 4, p95 time to first token, summed the same way:
+
+- **Rewritten questions: 1.94 s.** The 350 ms rewrite deadline (the original question's 130 ms
+  retrieval runs inside it), 130 ms to embed and retrieve the rewrite, 410 ms rerank, 900 ms first
+  token, 150 ms overhead.
+- **Questions with an identifier: 1.59 s.** 130 ms retrieval, 410 ms rerank, 900 ms first token,
+  150 ms overhead.
+
+Both inside the 2.0 s budget, the first by 60 ms. Answers correct 84%, recall at 6 is 90%.
 :::
+
+The rewritten path has almost no headroom. If generation's time to first token drifts up by a tenth,
+the budget is gone, and the next lever is the rewrite deadline, then the candidate count, measured
+the same way.
 
 ## The final design
 
@@ -348,26 +393,40 @@ questions with an identifier, which skip the rewrite. Answers correct 85%, recal
 | Component | Choice | Why this and not something bigger |
 |---|---|---|
 | Store | Postgres 16 on RDS, Multi-AZ: pgvector HNSW, `tsvector` with GIN, identifiers `text[]` with GIN | {{< var ch08.launch.index_gb >}} GB of vectors; one row per chunk keeps the indexes consistent |
-| Keyword search | Postgres full text, identifier matches ranked first | Within the noise of a separate BM25 engine on this golden set, with one fewer system |
-| Dense search | text-embedding-3-small, 1,536 dimensions, top 50 | Unchanged from System 7; the reranker makes up for a modest embedding model |
-| Fusion | Reciprocal rank fusion, k = 60, over two or four lists | No score calibration; nothing to train |
+| Keyword search | Postgres full text as an OR query, normalised identifier matches ranked first | One fewer system; a BM25 engine is the next step if traces show keyword ranking losing |
+| Dense search | text-embedding-3-small, 1,536 dimensions, top 50 with `ef_search` raised | Unchanged from System 7; the reranker makes up for a modest embedding model |
+| Fusion | Reciprocal rank fusion, k = 60, over two or four lists | No score calibration and nothing to train; k and list length are the only settings |
 | Query rewriting | Claude Haiku 5.5 with the cached glossary, skipped for identifiers, 350 ms deadline | Fixes the vocabulary gap without touching the slice it would harm |
 | Reranking | Cohere Rerank 5 Pro over 30 candidates, 500 ms deadline, fused-order fallback | Largest single quality gain; bounded latency |
-| Refusal | Threshold on the top rerank score, then System 7's citation check | Catches unanswerable questions before generation |
-| Generation | Claude Haiku 5.5, 6 chunks, numbered sources, streamed | Reading comprehension over good passages; measured in System 7 and again here |
+| Refusal | Threshold on the top rerank score, set on a separate calibration set, then System 7's citation check | Catches unanswerable questions before generation |
+| Generation | Claude Haiku 5.5, 6 chunks, numbered sources, streamed | Reading comprehension over good passages |
 | Quality loop | Golden set of 400 in four slices, recall and answers per slice, in CI | An average would have hidden every failure in this chapter |
+
+How each version scored, as counts (worked scenario):
+
+| Version | Answer chunk retrieved (of 340) | Answerable, answered correctly | Unanswerable, refused (of 60) | Answers correct (of 400) |
+|---|--:|--:|--:|--:|
+| 0: dense only | 211 (62%) | 195 | 50 | 245 (61%) |
+| 1: hybrid, fused | 259 (76%) | 243 | 50 | 293 (73%) |
+| 2: reranked, threshold | 296 (87%) | 272 | 56 | 328 (82%) |
+| 3: rewriting | 308 (91%) | 284 | 56 | 340 (85%) |
+| 4: deadlines | 305 (90%) | 281 | 56 | 337 (84%) |
+
+The gap between the first two columns is generation and the threshold: answers that were wrong or
+refused even though the right chunk was there. It is 16 to 24 questions in every version, which says
+the remaining work is in the answer stage, not retrieval.
 
 A request from the agent console, end to end:
 
 | Step | Typical time |
 |---|---|
-| Identifier detection and query embedding | 30 to 100 ms |
-| First-pass hybrid retrieval (in parallel with the rewrite) | 20 to 60 ms |
-| Rewrite, when it runs (deadline 350 ms) | 200 to 350 ms |
-| Second-pass retrieval and fusion | 20 to 60 ms |
-| Rerank 30 candidates | 150 to 380 ms |
+| Network and service overhead | 50 to 150 ms |
+| Identifier detection, embed the question, first-pass retrieval | 50 to 160 ms |
+| Rewrite, when it runs, in parallel with the step above (deadline 350 ms) | 200 to 350 ms |
+| Embed the rewrite, second-pass retrieval and fusion | 50 to 130 ms |
+| Rerank 30 candidates | 150 to 410 ms |
 | Model: time to first token | 400 to 900 ms |
-| **First words on screen** | **about 0.8 to 1.8 s** |
+| **First words on screen** | **about 0.7 to 1.9 s** |
 | Model: about 220 output tokens, streamed | 1 to 2 s more |
 
 ## Deployment
@@ -379,14 +438,19 @@ leave the region; nothing else does.
   serves the agent console's sidebar app and the Slack bot from System 7, which now routes
   operations channels here.
 - **Ingestion worker:** the same image on an EventBridge schedule every 15 minutes, now with the
-  layout parser for PDFs and the identifier catalogue. A change to the catalogue triggers a full
-  re-extraction, which is a few task-hours.
+  layout parser for PDFs and the identifier catalogue. A change to the catalogue triggers a
+  re-extraction over every chunk. The cost table's ingestion hours are a worked-scenario allowance;
+  time the layout parser per page before relying on them.
 - **Postgres:** RDS for PostgreSQL with pgvector, db.r6g.large Multi-AZ from day one. The support
   desk depends on this from launch, so the single-AZ pilot stage of System 7 is skipped.
+- **Reranking vendor:** the contract covers data retention and processing region, and the reranker
+  model version is pinned. The trace store keeps candidate passages, so it gets the corpus's access
+  rules and retention period.
 - **Timeouts and fallbacks** live in configuration, not code, so the rewrite and rerank deadlines can
   be tuned from load-test results without a release.
-- **Glossary:** a versioned file owned by the hub training team, reviewed like code. A change to it
-  changes the cached prefix, so the rewrite cache is cold for a few minutes after each release.
+- **Glossary and identifier catalogue:** versioned files with tests, owned by the hub training team
+  and the WMS team respectively, reviewed like code. A glossary change changes the cached prefix, so
+  the rewrite cache is cold for a few minutes after each release.
 
 ## Cost
 
@@ -399,12 +463,16 @@ load. Prices as of {{< var prices.as_of >}}.
 
 : Monthly cost of the final design, Cohere Rerank 5 Pro and Claude Haiku 5.5. {.striped}
 
-At launch, as in System 7, the fixed lines (database, containers, evaluation) are
+At launch, as in System 7, the fixed lines (database, containers, ingestion, evaluation) are
 {{< var ch08.launch.fixed_share >}} of the bill and the cheapest model in the system is not worth
 optimising. The interesting line is reranking. It costs more than generation at every scale, and by
 the large column it is {{< var ch08.large.rerank_share >}} of the total, against
-{{< var ch08.large.gen_share >}} for generation. A team that tuned prompts to save output tokens and
-never looked at the reranker would be optimising the smaller number.
+{{< var ch08.large.gen_share >}} for generation.
+
+That is a different result from [F5](../foundations/f5-optimisation.qmd)'s rule that reranking
+usually pays for itself in generation tokens. Here the 14 chunks it removes are input to Haiku 5.5,
+the cheapest model in the book, so they cost less than the reranking does. Reranking earns its place
+in this design on quality (nine points of answers correct in version 2), not on cost.
 
 ## Optimisation
 
@@ -415,9 +483,8 @@ the other side: if recall at 4 after reranking is close to recall at 6, generati
 quarter.
 
 **<span class="ocode">O9</span> Step down the reranker, with evidence.** Cohere's Rerank 5 Fast is
-{{< var ch08.rr_fast_price >}}/M against {{< var ch08.rr_pro_price >}}/M for Pro. In this worked
-scenario it lost two points of recall at 6 on the vague slice and nothing elsewhere, inside the
-noise. Taking it:
+{{< var ch08.rr_fast_price >}}/M against {{< var ch08.rr_pro_price >}}/M for Pro. Run the golden set
+with Fast, compared pair by pair with Pro on each slice. If no slice loses, this is what it saves:
 
 | | Launch | Growth | Large |
 |---|--:|--:|--:|
@@ -427,50 +494,58 @@ noise. Taking it:
 
 : Monthly cost with the faster reranker. Everything else unchanged.
 
-If the vague slice is the one that matters most to your users, a cascade is the middle way: Fast for
-questions with an identifier, where the keyword match has done most of the work, and Pro for the rest.
+If one slice does lose, a cascade is the middle way: Fast for the slices where it holds, Pro for the
+rest. Questions with an identifier are the natural first candidate, because the keyword match has
+already done most of the ranking.
 
 **<span class="ocode">O1</span> Cache the glossary.** The rewrite prompt is a 2,000-token glossary
 followed by a 60-token question. With the glossary cached, a rewrite costs {{< var ch08.q_rw >}}
 instead of {{< var ch08.q_rw_uncached >}}, a saving of {{< var ch08.rw_saving >}}. It also shortens
-time to first token on the rewrite, which is the stage with the tightest deadline. The cost line was
-small either way; the latency is the reason to do it.
+time to first token on the rewrite, the stage with the tightest deadline. Check that it is happening:
+the API reports cached input tokens on every response, and a prefix below the model's minimum
+cacheable length is silently not cached.
 
-**<span class="ocode">O19</span> Self-host the reranker, only at the large scale.** An open
-cross-encoder such as bge-reranker-v2-m3 ({{< var ch08.rr_params >}} parameters) runs on one L4 GPU.
-Its throughput is arithmetic:
+**Self-hosting the reranker: a break-even, not a recommendation.** An open cross-encoder such as
+bge-reranker-v2-m3 ({{< var ch08.rr_params >}} parameters) fits on one L4 GPU. What it would cost
+depends on how many queries per second one GPU sustains within the 500 ms rerank deadline, and that
+is a load-test result on your hardware, not something arithmetic can supply. Arithmetic can say what
+the throughput would have to be:
 
 ::: {.numbers}
 Work per query: 2 x {{< var ch08.rr_params >}} params x {{< var ch08.rr_tokens >}} tokens = {{< var ch08.rr_tflop >}} TFLOP
-One L4:         {{< var ch08.l4_tflops >}} TFLOPS BF16 x {{< var ch08.gpu_eff >}} efficiency = {{< var ch08.qps_per_gpu >}} queries/second
-Large peak:     {{< var ch08.large.peak_qps >}} queries/second / {{< var ch08.qps_per_gpu >}} = {{< var ch08.large.gpus >}} GPUs
+One L4 at its datasheet peak: {{< var ch08.l4_tflops >}} TFLOPS BF16 / {{< var ch08.rr_tflop >}} TFLOP = {{< var ch08.ceiling_qps >}} queries/second, an upper bound
+One L4 always on (g6.xlarge): {{< var ch08.l4_hourly >}} an hour x 730 = {{< var ch08.l4_monthly >}} a month
 :::
 
-The 35% efficiency is a rule of thumb for an encoder over short sequences, which keeps the GPU busy
-but well short of its datasheet peak; measure it before relying on it. Priced against the two APIs:
+Each API bill pays for a fleet of always-on L4s. Self-hosting matches the API only if that fleet,
+at two GPUs or more for redundancy, can carry the peak:
 
 {{< include ../_generated/costs/ch08-rerank.md >}}
 
-: Monthly reranking cost, 30 candidates per query. The g6.xlarge (one L4) is priced at the us-east-1 list price of {{< var ch08.l4_hourly >}} an hour; Mumbai is typically higher. {.striped}
+: Monthly reranking cost through the API, and the throughput each L4 would need to sustain at peak to cost the same. The g6.xlarge is priced at the us-east-1 list price; Mumbai is typically higher. {.striped}
 
-At launch and growth the minimum fleet of two GPUs, kept for redundancy, costs more than the API
-does. At the large scale a fleet sized for peak and left running is still more than Rerank 5 Fast;
-only a fleet that scales down outside business hours, at {{< var ch08.large.rr_gpu_scaled >}} a
-month against {{< var ch08.large.rr_fast >}}, wins, and then only if the open model matches the
-hosted one on the golden set. That saving also buys a GPU service to run, which is System 39's whole
-chapter. Below the large scale, buy the API.
+At launch neither API bill pays for two GPUs, so the API is cheaper whatever the GPU achieves. At
+growth, Pro's bill pays for {{< var ch08.growth.pro_fleet >}} L4s, each of which would need
+{{< var ch08.growth.pro_need >}} queries per second at peak ({{< var ch08.growth.pro_need_share >}}
+of its datasheet ceiling); Fast's bill does not pay for two. At the large scale, matching Fast would
+take {{< var ch08.large.fast_need >}} queries per second on each of {{< var ch08.large.fast_fleet >}}
+GPUs, {{< var ch08.large.fast_need_share >}} of the ceiling, while also meeting the latency deadline.
+Running fewer GPUs outside business hours lowers the bar; this table does not count that. Whether
+any of these rates is achievable is the measurement to make before the decision, together with the
+open model's scores on the golden set. A GPU fleet is also a service to run, which is System 39's
+whole chapter.
 
 ## Operating it
 
 | Metric | Healthy | Alert when |
 |---|---|---|
-| Golden set, recall at 6 and answers correct, per slice | At or above the last release on every slice | Any slice drops by more than its noise level (CI fails the build) |
+| Golden set, recall at 6 and answers correct, per slice | At or above the last release on every slice | A paired drop on any slice that its size can detect (CI fails the build) |
 | Reranker fallback rate | Under 1% of requests | Over 5% for 10 minutes: the vendor is slow or down |
-| Rewrite deadline misses | Around 10% of rewritten questions | Over 25%: the rewrite model is slow, or the cache is cold |
+| Rewrite deadline misses | Within the budget set at launch (12% in the load test) | Twice the budget: the rewrite model is slow, or the cache is cold |
 | Questions with an identifier but no identifier match | Under 5% | A sustained rise: a new code format the catalogue does not know |
 | Top rerank score, median | Steady week on week | Shifts by more than 10%: content or traffic changed, or the reranker version did |
 | Refusal rate | 10% to 20% | Below 5% or above 30% |
-| p95 time to first token, agent console | Under 2 s | Over 2.5 s for 15 minutes |
+| p95 time to first token, agent console | Under 2 s | Over 2 s for 15 minutes; the rewritten path has 60 ms of headroom |
 | Cost per query | Steady | Over twice the trailing weekly average |
 
 **Failure modes to expect.**
@@ -479,12 +554,14 @@ chapter. Below the large scale, buy the API.
   quality. Users notice a little; the fallback alert notices first. Decide in advance how long
   degraded mode may run before the support desk is told.
 - **A new identifier format appears.** The WMS upgrade introduces five-digit error codes, the regex
-  catalogue matches none of them, and the exact-term slice quietly falls back to version 0 quality.
-  The "identifier but no match" metric catches it, but only if questions are scanned with a broader
-  pattern than the catalogue; keep a generic `[A-Z]{2,4}-\d{3,6}` detector for exactly this.
+  catalogue matches none of them, and those questions lose the identifier boost: keyword search
+  still sees the code as a word, but no longer ranks exact matches first. The "identifier but no
+  match" metric catches it, but only if questions are scanned with a broader pattern than the
+  catalogue; keep a generic `[A-Z]{2,4}-?\d{3,6}` detector for exactly this.
 - **The reranker model changes underneath you.** A hosted reranker version upgrade shifts the score
   distribution, and the refusal threshold, calibrated on the old scores, now refuses too much or too
-  little. Pin the model version, and re-calibrate the threshold on the golden set before moving.
+  little. Pin the model version, and re-calibrate the threshold on the calibration set before
+  moving.
 - **The glossary goes stale.** New slang appears with every new hub and every new tool. Thumbs-down
   answers on vague questions are the signal; the weekly review from System 7 routes them to the hub
   training team.
@@ -495,11 +572,13 @@ chapter. Below the large scale, buy the API.
 outgrow one Postgres instance's memory for HNSW. Move to a search engine that does both keyword and
 vector retrieval in one index (OpenSearch, Vespa, Elasticsearch), which keeps the one-index
 consistency this design depends on. Reduce vector size before you move: text-embedding-3 models can
-return shorter vectors, and halving the dimensions halves the memory, at a recall cost you measure.
+return shorter vectors, and halving the dimensions halves the stored vectors (the HNSW graph's links
+do not shrink), at a recall cost you measure.
 
-**If the latency budget were 500 ms.** Drop the rewrite from the critical path entirely, self-host a
-small reranker in the same availability zone as the service, and rerank 20 candidates. Or skip
-reranking for questions with an identifier match at rank 1, which are mostly right already.
+**If the latency budget were 500 ms.** Drop the rewrite from the critical path entirely, rerank 20
+candidates with a reranker in the same availability zone as the service, or skip reranking for
+questions whose identifier match is already at rank 1. Each of those is a quality trade to measure
+on the golden set.
 
 **If questions came in Hindi.** Keyword search needs a Hindi-aware text configuration or a separate
 engine with one, the embedding model and reranker must be multilingual, and the golden set needs a
@@ -508,7 +587,8 @@ Hindi slice of its own. Expect two to four times as many tokens per question
 
 **If you could not use a hosted reranker.** Self-host the open cross-encoder from Optimisation, or
 look at late-interaction retrieval (ColBERT-style models), which stores one vector per token and
-scores questions against them without a separate reranking call, at several times the index size.
+scores questions against them without a separate reranking call, at the price of a much larger index
+unless the vectors are compressed.
 
 **If people ask follow-ups.** "And if it shows 4013 instead?" must be rewritten into a standalone
 question before retrieval. The rewrite stage built here is where that happens; System 9 covers it.
@@ -521,12 +601,12 @@ That is System 10.
 
 | Decision | Alternative | Why we chose it |
 |---|---|---|
-| Postgres full text beside pgvector | A dedicated BM25 engine | Within the noise on the golden set, and one transaction keeps both indexes consistent |
-| Identifiers as an exact-match column | Trusting the text parser with codes | The exact-term slice is a third of support traffic; a regex catalogue is cheap and testable |
-| Reciprocal rank fusion | Weighted score blending | Scores are not comparable across retrievers; RRF needs no tuning |
-| Cross-encoder reranking of 30 | Sending 20 chunks to the model | Sending more barely moved answers and tripled generation cost; reranking moved answers 8 points |
-| Hosted reranker | Self-hosted on GPUs | Cheaper below the large scale, and no GPU service to run |
-| Rerank score threshold for refusal | Relying on the citation check alone | Refuses before generation, and its scores separate answerable from unanswerable better than cosine |
-| Glossary-based rewriting, skipped for identifiers | Rewriting every question, or HyDE | Fixes the vague slice without risking the exact-term slice |
+| Postgres full text beside pgvector | A dedicated BM25 engine | One transaction keeps both indexes consistent; move if traces show keyword ranking losing |
+| Identifiers as a normalised exact-match column | Trusting the text parser with codes | The exact-term slice is a third of traffic; a regex catalogue is cheap and testable |
+| Reciprocal rank fusion | Weighted score blending | Scores are not comparable across retrievers; RRF has nothing to train |
+| Cross-encoder reranking of 30 | Sending 20 chunks to the model | Sending more moved answers one point at {{< var ch08.wide_cost_ratio >}} times the generation cost; reranking moved them nine |
+| Hosted reranker | Self-hosted on GPUs | At launch the API costs less than two GPUs; above that it depends on throughput nobody has measured yet |
+| Rerank score threshold, set on a calibration set | Relying on the citation check alone | Refuses before generation; calibrated on questions it is not scored on |
+| Glossary-based rewriting, skipped for identifiers | Rewriting every question, or HyDE | Fixes the vague slice without touching the exact-term slice; shorter on the critical path |
 | Deadlines with fallbacks on rewrite and rerank | Waiting for every stage | A slightly worse answer on time beats a better one after the customer has gone |
 | Four-slice golden set of 400 | One average over 150 | The slices are where every failure in this chapter showed up |
